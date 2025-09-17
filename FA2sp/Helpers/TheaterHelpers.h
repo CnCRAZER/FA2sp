@@ -11,6 +11,7 @@
 
 #include <set>
 #include <vector>
+#include <CMapData.h>
 
 class TheaterHelpers
 {
@@ -41,6 +42,32 @@ public:
 			return "Des";
 		else
 			return "";
+	}
+
+	static ppmfc::CString GetSuffix(char theaterIdentifier)
+	{
+		if (theaterIdentifier == 'T')
+			return "Tem";
+		else if (theaterIdentifier == 'A')
+			return "Sno";
+		else if (theaterIdentifier == 'U')
+			return "Urb";
+		else if (theaterIdentifier == 'N')
+			return "Ubn";
+		else if (theaterIdentifier == 'L')
+			return "Lun";
+		else if (theaterIdentifier == 'D')
+			return "Des";
+		else
+			return "Tem";
+	}
+
+	static ppmfc::CString GetCurrentSuffix()
+	{
+		if (!CMapData::Instance->MapWidthPlusHeight)
+			return "";
+
+		return GetSuffix(CINI::CurrentDocument->GetString("Map", "Theater"));
 	}
 
 	static bool IsAllowedTheaterName(ppmfc::CString theaterName)

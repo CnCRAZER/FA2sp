@@ -6,12 +6,10 @@
 #include <Helpers/Macro.h>
 
 #include "../FA2sp.h"
+#include "../Miscs/DialogStyle.h"
 
 DEFINE_HOOK(4D2680, CMyViewFrame_OnCreateClient, 5)
 {
-    if (!ExtConfigs::VerticalLayout)
-        return 0;
-
     GET(CMyViewFrame*, pThis, ECX);
     GET_STACK(LPCREATESTRUCT, lpcs, 0x4);
     GET_STACK(ppmfc::CCreateContext*, pContent, 0x8);
@@ -30,9 +28,22 @@ DEFINE_HOOK(4D2680, CMyViewFrame_OnCreateClient, 5)
                 pThis->pRightFrame = (CRightFrame*)pThis->SplitterWnd.GetPane(0, 1);
                 pThis->pIsoView = (CIsoView*)pThis->pRightFrame->CSplitter.GetPane(0, 0);
                 pThis->pIsoView->pParent = pThis;
-                pThis->pTileSetBrowserFrame = (CTileSetBrowserFrame*)pThis->pRightFrame->CSplitter.GetPane(0, 1);
+                if (ExtConfigs::VerticalLayout) {
+                    pThis->pTileSetBrowserFrame = (CTileSetBrowserFrame*)pThis->pRightFrame->CSplitter.GetPane(0, 1);
+                }
+                else {
+                    pThis->pTileSetBrowserFrame = (CTileSetBrowserFrame*)pThis->pRightFrame->CSplitter.GetPane(1, 0);
+                }
                 pThis->pViewObjects = (CViewObjects*)pThis->SplitterWnd.GetPane(0, 0);
-                pThis->Minimap.CreateEx(0, nullptr, "Minimap", 0, rect, nullptr, 0);
+                pThis->Minimap.CreateEx(0, nullptr, "Minimap", 0, rect, pThis, 0);
+
+                LONG style = GetWindowLong(pThis->Minimap, GWL_STYLE);
+                style &= ~(WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+                style |= WS_SYSMENU;
+                SetWindowLong(pThis->Minimap, GWL_STYLE, style);
+
+                DarkTheme::SetDarkTheme(pThis->Minimap);
+
                 pThis->Minimap.Update();
                 if (bRes = pThis->StatusBar.CreateEx(pThis, 0x900))
                 {

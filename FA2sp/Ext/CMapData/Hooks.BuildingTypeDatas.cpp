@@ -15,12 +15,22 @@ DEFINE_HOOK(4B5460, CMapData_InitializeBuildingTypes, 7)
 	{
 		int idx = pThis->GetBuildingTypeID(ID);
 		auto& DataExt = pThis->BuildingDataExts[idx];
-		ppmfc::CString ImageID = ID;
-		if (ppmfc::CString* pArtID = Variables::Rules.TryGetString(ID, "Image"))
-			ImageID = *pArtID;
 
+		ppmfc::CString ImageID = Variables::RulesMap.GetString(ID, "Image", ID);
 		auto foundation = CINI::Art->GetString(ImageID, "Foundation");
+
+		// https://modenc.renegadeprojects.com/Foundation
+		// This flag is read from art(md).ini twice: 
+		// from section you specified in rules as [object]¡úImage, 
+		// and from simply [object] , 
+		// and the second one overrules the first if present. 
+		// however, ares's custom foundation doesn't have this bug.
 		if (_strcmpi(foundation, "Custom"))
+		{
+			foundation = CINI::Art->GetString(ID, "Foundation", foundation);
+		}
+		
+		if (_strcmpi(foundation, "Custom") && _strcmpi(foundation, "3x3REFINERY"))
 		{
 			DataExt.Width = atoi(foundation);
 			DataExt.Height = atoi(&foundation[2]);
@@ -31,14 +41,10 @@ DEFINE_HOOK(4B5460, CMapData_InitializeBuildingTypes, 7)
 		}
 		else
 		{
-			// Custom, code reference Ares
-			DataExt.Width = CINI::Art->GetInteger(ImageID, "Foundation.X", 0);
-			DataExt.Height = CINI::Art->GetInteger(ImageID, "Foundation.Y", 0);
-			DataExt.Foundations = new std::vector<MapCoord>;
 			auto ParsePoint = [](const char* str)
 			{
 				int x = 0, y = 0;
-				switch (sscanf_s(str, "%d,%d", &x, &y)) 
+				switch (sscanf_s(str, "%d,%d", &x, &y))
 				{
 				case 0:
 					x = 0;
@@ -54,16 +60,39 @@ DEFINE_HOOK(4B5460, CMapData_InitializeBuildingTypes, 7)
 				}
 				return MapCoord{ x,y };
 			};
-			for (int i = 0; i < DataExt.Width * DataExt.Height; ++i) 
-			{
-				ppmfc::CString key;
-				key.Format("Foundation.%d", i);
-				if (auto ppPoint = CINI::Art->TryGetString(ImageID, key))
-					DataExt.Foundations->push_back(ParsePoint(*ppPoint));
-				else
-					break;
-			}
 
+			if (_strcmpi(foundation, "3x3REFINERY"))
+			{
+				// Custom, code reference Ares
+				DataExt.Width = CINI::Art->GetInteger(ImageID, "Foundation.X", 0);
+				DataExt.Height = CINI::Art->GetInteger(ImageID, "Foundation.Y", 0);
+				DataExt.Foundations = new std::vector<MapCoord>;
+				for (int i = 0; i < DataExt.Width * DataExt.Height; ++i)
+				{
+					ppmfc::CString key;
+					key.Format("Foundation.%d", i);
+					if (auto pPoint = CINI::Art->TryGetString(ImageID, key)) {
+						DataExt.Foundations->push_back(ParsePoint(*pPoint));
+					}
+					else
+						break;
+				}
+			}
+			else
+			{
+				DataExt.Width = 3;
+				DataExt.Height = 3;
+				DataExt.Foundations = new std::vector<MapCoord>;
+				DataExt.Foundations->push_back({0,0});
+				DataExt.Foundations->push_back({1,0});
+				DataExt.Foundations->push_back({2,0});
+				DataExt.Foundations->push_back({0,1});
+				DataExt.Foundations->push_back({1,1});
+				DataExt.Foundations->push_back({0,2});
+				DataExt.Foundations->push_back({1,2});
+				DataExt.Foundations->push_back({2,2});
+			}
+			
 			// Build outline draw data
 			DataExt.LinesToDraw = new std::vector<std::pair<MapCoord, MapCoord>>;
 			std::vector<std::vector<BOOL>> LinesX, LinesY; 
@@ -97,8 +126,8 @@ DEFINE_HOOK(4B5460, CMapData_InitializeBuildingTypes, 7)
 						MapCoord start, end;
 						start.X = ((x - length) - y) * 30;
 						start.Y = ((x - length) + y) * 15;
-						end.X = (x - y) * 30;
-						end.Y = (x + y) * 15;
+						end.X = (x - y) * 30 + 2;
+						end.Y = (x + y) * 15 + 1;
 						DataExt.LinesToDraw->push_back(std::make_pair(start, end));
 						length = 0;
 					}
@@ -108,8 +137,8 @@ DEFINE_HOOK(4B5460, CMapData_InitializeBuildingTypes, 7)
 					MapCoord start, end;
 					start.X = ((DataExt.Width - length) - y) * 30;
 					start.Y = ((DataExt.Width - length) + y) * 15;
-					end.X = (DataExt.Width - y) * 30;
-					end.Y = (DataExt.Width + y) * 15;
+					end.X = (DataExt.Width - y) * 30 + 2;
+					end.Y = (DataExt.Width + y) * 15 + 1;
 					DataExt.LinesToDraw->push_back(std::make_pair(start, end));
 				}
 			}
@@ -153,7 +182,7 @@ DEFINE_HOOK(4B5460, CMapData_InitializeBuildingTypes, 7)
 	else
 	{
 		pThis->BuildingDataExts.clear();
-		const auto Types = Variables::Rules.GetSection("BuildingTypes");
+		const auto Types = Variables::RulesMap.GetSection("BuildingTypes");
 		for (auto& Type : Types)
 			ProcessType(Type.second);
 	}
@@ -176,10 +205,13 @@ DEFINE_HOOK(4A5089, CMapData_UpdateMapFieldData_Structures_CustomFoundation, 6)
 			{
 				const int x = X + dx;
 				const int y = Y + dy;
-				auto pCell = CMapData::Instance->GetCellAt(x, y);
-				pCell->Structure = R->BX();
-				pCell->TypeListIndex = BuildingIndex;
-				CMapData::Instance->UpdateMapPreviewAt(x, y);
+				if (CMapData::Instance->GetCoordIndex(x, y) < CMapData::Instance->CellDataCount)
+				{
+					auto pCell = CMapData::Instance->GetCellAt(x, y);
+					pCell->Structure = R->BX();
+					pCell->TypeListIndex = BuildingIndex;
+					CMapData::Instance->UpdateMapPreviewAt(x, y);
+				}
 			}
 		}
 	}
@@ -189,10 +221,13 @@ DEFINE_HOOK(4A5089, CMapData_UpdateMapFieldData_Structures_CustomFoundation, 6)
 		{
 			const int x = X + block.Y;
 			const int y = Y + block.X;
-			auto pCell = CMapData::Instance->GetCellAt(x, y);
-			pCell->Structure = R->BX();
-			pCell->TypeListIndex = BuildingIndex;
-			CMapData::Instance->UpdateMapPreviewAt(x, y);
+			if (CMapData::Instance->GetCoordIndex(x, y) < CMapData::Instance->CellDataCount)
+			{
+				auto pCell = CMapData::Instance->GetCellAt(x, y);
+				pCell->Structure = R->BX();
+				pCell->TypeListIndex = BuildingIndex;
+				CMapData::Instance->UpdateMapPreviewAt(x, y);
+			}
 		}
 	}
 

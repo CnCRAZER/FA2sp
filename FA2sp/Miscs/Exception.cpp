@@ -5,12 +5,16 @@
 #include "../FA2sp.Constants.h"
 
 #include <Helpers\Macro.h>
-
+#include <iostream>
+#include <filesystem>
 #include <CFinalSunApp.h>
 #include <CFinalSunDlg.h>
 #include <CLoading.h>
 #include <CMapData.h>
 #include <FA2PP.h>
+#include "../Helpers/Translations.h"
+#include "../Ext/CLoading/Body.h"
+#include "DialogStyle.h"
 
 LONG CALLBACK Exception::ExceptionFilter(PEXCEPTION_POINTERS const pExs)
 {
@@ -28,15 +32,22 @@ LONG CALLBACK Exception::ExceptionFilter(PEXCEPTION_POINTERS const pExs)
 
 [[noreturn]] LONG CALLBACK Exception::ExceptionHandler(PEXCEPTION_POINTERS const pExs)
 {
+	static int handlingTimes = 0;
+	if (handlingTimes > 1) {
+		::ExitProcess(pExs->ExceptionRecord->ExceptionCode);
+	}
+	handlingTimes++;
 	Logger::Raw("Exception handler fired!\n");
 	Logger::Raw("Exception %X at %p\n", pExs->ExceptionRecord->ExceptionCode, pExs->ExceptionRecord->ExceptionAddress);
-	SetWindowText(CFinalSunDlg::Instance->m_hWnd, "Fatal Error - FinalAlert 2");
+	SetWindowText(CFinalSunDlg::Instance->m_hWnd, "Fatal Error - " __str(PROGRAM_TITLE));
 
 	Logger::Raw("Last succeeded operation: %d\n", CFinalSunDlg::LastSucceededOperation());
 	Logger::Raw("Last succeeded library operation: %d\n", CFinalSunDlg::LastSucceededLibraryOperation());
 	Logger::Raw("SE2KMODE: %d\n", CFinalSunDlg::SE2KMODE());
 
 	//	if (IsDebuggerAttached()) return EXCEPTION_CONTINUE_SEARCH;
+
+	std::wstring log_file_path = L"";
 
 	switch (pExs->ExceptionRecord->ExceptionCode)
 	{
@@ -60,10 +71,10 @@ LONG CALLBACK Exception::ExceptionFilter(PEXCEPTION_POINTERS const pExs)
 	case EXCEPTION_PRIV_INSTRUCTION:
 	case EXCEPTION_SINGLE_STEP:
 	case EXCEPTION_STACK_OVERFLOW:
-	case 0xE06D7363: // exception thrown and not caught
+	case CPP_EH_EXCEPTION: // exception thrown and not caught
 	{
 		std::wstring path = Exception::PrepareSnapshotDirectory();
-
+		log_file_path = path;
 		std::wstring except_file = path + L"\\except.txt";
 
 		if (FILE* except = _wfsopen(except_file.c_str(), L"w", _SH_DENYNO)) {
@@ -71,6 +82,7 @@ LONG CALLBACK Exception::ExceptionFilter(PEXCEPTION_POINTERS const pExs)
 			fprintf(except, "Internal Error encountered!\n");
 			fprintf(except, pDelim);
 			fprintf(except, VERSION_STRVER);
+			fprintf(except, ", "  __str(HDM_PRODUCT_VERSION));
 			fprintf(except, "\n");
 			fprintf(except, pDelim);
 
@@ -92,8 +104,9 @@ LONG CALLBACK Exception::ExceptionFilter(PEXCEPTION_POINTERS const pExs)
 			fclose(except);
 			Logger::Raw("Exception data has been saved to file:\n%ls\n", except_file.c_str());
 		}
-
-		if (MessageBox(CFinalSunDlg::Instance->m_hWnd, "FinalAlert 2 has encountered a fatal error!\nWould you like to create a full crash report for the developer?", "Fatal Error!", MB_YESNO | MB_ICONERROR) == IDYES) {
+		if (MessageBox(CFinalSunDlg::Instance->m_hWnd, Translations::TranslateOrDefault("FinalAlert2FatalError", 
+			"FinalAlert 2 has encountered a fatal error!\nWould you like to create a full crash report for the developer?"), 
+			"Fatal Error!", MB_YESNO | MB_ICONERROR) == IDYES) {
 			HCURSOR loadCursor = LoadCursor(nullptr, IDC_WAIT);
 			SetClassLong(CFinalSunDlg::Instance->m_hWnd, GCL_HCURSOR, reinterpret_cast<LONG>(loadCursor));
 			SetCursor(loadCursor);
@@ -122,21 +135,61 @@ LONG CALLBACK Exception::ExceptionFilter(PEXCEPTION_POINTERS const pExs)
 		break;
 	}
 
+	if (log_file_path == L"")
+		log_file_path = Exception::PrepareSnapshotDirectory();
+	std::filesystem::copy((FString(CFinalSunApp::ExePath()) + "\\FA2sp.log").c_str(), log_file_path + L"\\FA2sp.log", std::filesystem::copy_options::overwrite_existing);
+	std::filesystem::copy((FString(CFinalSunApp::ExePath()) + "\\syringe.log").c_str(), log_file_path + L"\\syringe.log", std::filesystem::copy_options::overwrite_existing);
+	std::filesystem::copy((FString(CFinalSunApp::ExePath()) + "\\finalalert2log.txt").c_str(), log_file_path + L"\\finalalert2log.txt", std::filesystem::copy_options::overwrite_existing);
+
 	if (CMapData::Instance->MapWidthPlusHeight)
 	{
 		Logger::Raw("Trying to save current map.\n");
-		ppmfc::CString fcrash_backup = CFinalSunApp::ExePath();
-		fcrash_backup += "\\fcrash_backup.map";
+		FString fcrash_backup = CFinalSunApp::ExePath();
+
+		FString directoryPath = CFinalSunApp::ExePath();
+		directoryPath += "\\CrashBackups";
+		if (!std::filesystem::exists(directoryPath.c_str())) {
+			VEHGuard guard(false);
+			try {
+				if (std::filesystem::create_directory(directoryPath.c_str())) {
+					fcrash_backup += "\\CrashBackups";
+				}
+				else {
+					
+				}
+			}
+			catch (const std::filesystem::filesystem_error& e) {
+				UNREFERENCED_PARAMETER(e);
+			}
+		}
+		else
+		{
+			fcrash_backup += "\\CrashBackups";
+		}
+
+
+		FString backup_name;
+		SYSTEMTIME time;
+		GetLocalTime(&time);
+		backup_name.Format("fcrash_backup-%04u%02u%02u-%02u%02u%02u.map", time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond);
+		fcrash_backup += "\\" + backup_name;
 
 		SaveMapExt::IsAutoSaving = true;
 		CFinalSunDlg::Instance->SaveMap(fcrash_backup);
 		SaveMapExt::IsAutoSaving = false;
 
-		MessageBox(CFinalSunDlg::Instance->m_hWnd, "Current MapData has been saved as fcrash_backup.map.", "Fatal Error!", MB_OK | MB_ICONINFORMATION);
+		MessageBox(CFinalSunDlg::Instance->m_hWnd, Translations::TranslateOrDefault("FinalAlert2FatalError.SaveMap", 
+			"Current MapData has been saved as: \n") + fcrash_backup, "Fatal Error!", MB_OK | MB_ICONINFORMATION);
 	}
 	else
-		MessageBox(CFinalSunDlg::Instance->m_hWnd, "Seems there's no map had been loaded.", "Fatal Error!", MB_OK | MB_ICONINFORMATION);
-	
+		MessageBox(CFinalSunDlg::Instance->m_hWnd, Translations::TranslateOrDefault("FinalAlert2FatalError.MapNotLoaded",
+			"Seems there's no map had been loaded."), "Fatal Error!", MB_OK | MB_ICONINFORMATION);
+
+	if (ExtConfigs::LoadImageDataFromServer)
+	{
+		CLoadingExt::PingServerRunning = false;
+		CLoadingExt::SendRequestText("QUIT_PROGRAME");
+	}
 	CLoading::Instance->Release();
 
 	CINI::Rules->Release();
@@ -150,6 +203,7 @@ LONG CALLBACK Exception::ExceptionFilter(PEXCEPTION_POINTERS const pExs)
 	CINI::Turtorial->Release();
 	CINI::FAData->Release();
 	CINI::FALanguage->Release();
+	DarkTheme::CleanupDarkThemeBrushes();
 
 	Exception::Exit(pExs->ExceptionRecord->ExceptionCode);
 };
@@ -200,6 +254,28 @@ std::wstring Exception::FullDump(
 	return filename;
 }
 
+LONG CALLBACK Exception::VEH_Handler(PEXCEPTION_POINTERS pExs)
+{
+	if (!FA2sp::g_VEH_Enabled) {
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+
+	DWORD code = pExs->ExceptionRecord->ExceptionCode;
+	if (code != CPP_EH_EXCEPTION && (code & 0xF0000000) != 0xC0000000)
+	{
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+
+	//if (IsDebuggerPresent() && code == CPP_EH_EXCEPTION)
+	//{
+	//	return EXCEPTION_CONTINUE_SEARCH;
+	//}
+
+	Exception::ExceptionHandler(pExs);
+
+	return EXCEPTION_CONTINUE_EXECUTION;
+}
+
 [[noreturn]] void Exception::Exit(UINT ExitCode) {
 	Logger::Raw("Exiting...\n");
 	ExitProcess(ExitCode);
@@ -211,6 +287,12 @@ DEFINE_HOOK(435270, CFinalSunDlg_DoModal, 8)
 
 	::SetUnhandledExceptionFilter(Exception::ExceptionFilter);
 	Logger::Info("FA2sp UnhandledExceptionFliter installed!\n");
+
+	if (ExtConfigs::StrictExceptionFilter)
+	{
+		::AddVectoredExceptionHandler(1, Exception::VEH_Handler);
+		Logger::Info("FA2sp VEH Handler installed!\n");
+	}
 	
 	R->EAX(pThis->ppmfc::CDialog::DoModal());
 

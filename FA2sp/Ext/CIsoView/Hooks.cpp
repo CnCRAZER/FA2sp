@@ -12,16 +12,18 @@
 #include "../CMapData/Body.h"
 
 #include "../../Source/CIsoView.h"
+#include "../../Helpers/Translations.h"
+#include "../CFinalSunDlg/Body.h"
+#include <Miscs/Miscs.h>
+#include "../../ExtraWindow/CTerrainGenerator/CTerrainGenerator.h"
+#include "../../Miscs/Palettes.h"
+#include <CShpFile.h>
+#include <CMixFile.h>
+#include "../../Miscs/TheaterInfo.h"
 
 namespace CIsoViewDrawTemp
 {
-	float ConditionYellow = 0.67f;
-}
-
-DEFINE_HOOK(46DE00, CIsoView_Draw_InitDrawData, 7)
-{
-	CIsoViewDrawTemp::ConditionYellow = Variables::Rules.GetSingle("AudioVisual", "ConditionYellow", 0.67f);
-	return 0;
+	int BuildingIndex;
 }
 
 /*
@@ -42,15 +44,6 @@ DEFINE_HOOK(45AEFF, CIsoView_OnMouseMove_UpdateCoordinateYXToXY, B)
 	R->EDI(nPointY);
 
 	return 0x45AF76;
-}
-
-// Fix on wrong infantry facing
-DEFINE_HOOK(473E46, CIsoView_UpdatePaint_InfantryFacing, 9)
-{
-	GET(const int, nFacing, EAX);
-	R->EAX(7 - nFacing / 32);
-	R->ECX(R->lea_Stack<DWORD>(0x590));
-	return 0x473E52;
 }
 
 DEFINE_HOOK(46CB96, CIsoView_DrawMouseAttachedStuff_OverlayAutoConnectionFix, 5)
@@ -91,334 +84,9 @@ DEFINE_HOOK(459F4F, CIsoView_Draw_CopySelectionBoundColor, 6)
 	return 0;
 }
 
-DEFINE_HOOK(45AD81, CIsoView_Draw_CursorSelectionBoundColor, 5)
-{
-	R->Stack<COLORREF>(0x0, ExtConfigs::CursorSelectionBound_Color);
-	return 0;
-}
-
-DEFINE_HOOK(45ADD0, CIsoView_Draw_CursorSelectionBoundHeightColor, 6)
-{
-	R->Stack<COLORREF>(0x8, ExtConfigs::CursorSelectionBound_HeightColor);
-	return 0;
-}
-
 DEFINE_HOOK(470194, CIsoView_Draw_LayerVisible_Overlay, 8)
 {
 	return CIsoViewExt::DrawOverlays ? 0 : 0x470772;
-}
-
-DEFINE_HOOK(470772, CIsoView_Draw_LayerVisible_Structures, 8)
-{
-	return CIsoViewExt::DrawStructures ? 0 : 0x4725CB;
-}
-
-DEFINE_HOOK(4725CB, CIsoView_Draw_LayerVisible_Basenodes, 8)
-{
-	return CIsoViewExt::DrawBasenodes ? 0 : 0x472F33;
-}
-
-DEFINE_HOOK(472F33, CIsoView_Draw_LayerVisible_Units, 9)
-{
-	return CIsoViewExt::DrawUnits ? 0 : 0x47371A;
-}
-
-DEFINE_HOOK(47371A, CIsoView_Draw_LayerVisible_Aircrafts, 9)
-{
-	return CIsoViewExt::DrawAircrafts ? 0 : 0x473DA0;
-}
-
-DEFINE_HOOK(473DAA, CIsoView_Draw_LayerVisible_Infantries, 9)
-{
-	return CIsoViewExt::DrawInfantries ? 0 : 0x4741D9;
-}
-
-DEFINE_HOOK(4741E7, CIsoView_Draw_LayerVisible_Terrains, 9)
-{
-	return CIsoViewExt::DrawTerrains ? 0 : 0x474563;
-}
-
-DEFINE_HOOK(474563, CIsoView_Draw_LayerVisible_Smudges, 9)
-{
-	return CIsoViewExt::DrawSmudges ? 0 : 0x4748DC;
-}
-
-DEFINE_HOOK(471162, CIsoView_Draw_PowerUp1Loc_PosFix, 5)
-{
-	REF_STACK(const ppmfc::CString, ID, STACK_OFFS(0xD18, 0xBFC));
-	REF_STACK(const ppmfc::CString, BldID, STACK_OFFS(0xD18, 0xC08));
-	GET_STACK(int, X, STACK_OFFS(0xD18, 0xCFC));
-	GET_STACK(int, Y, STACK_OFFS(0xD18, 0xD00));
-
-	auto pBldData = ImageDataMapHelper::GetImageDataFromMap(CLoadingExt::GetImageName(BldID, 0));
-	auto pData = ImageDataMapHelper::GetImageDataFromMap(CLoadingExt::GetImageName(ID, 0));
-
-	ppmfc::CString ArtID; // BldArtID
-	if (auto ppImage = Variables::Rules.TryGetString(BldID, "Image"))
-		ArtID = *ppImage;
-	else
-		ArtID = BldID;
-
-	X += CINI::Art->GetInteger(ArtID, "PowerUp1LocXX", 0);
-	Y += CINI::Art->GetInteger(ArtID, "PowerUp1LocYY", 0);
-
-	X += (pBldData->FullWidth - pData->FullWidth) / 2;
-	Y += (pBldData->FullHeight - pData->FullHeight) / 2;
-
-	R->ESI(X);
-	R->EDI(Y);
-
-	return 0x47141D;
-}
-
-DEFINE_HOOK(471980, CIsoView_Draw_PowerUp2Loc_PosFix, 5)
-{
-	REF_STACK(const ppmfc::CString, ID, STACK_OFFS(0xD18, 0xBFC));
-	REF_STACK(const ppmfc::CString, BldID, STACK_OFFS(0xD18, 0xC08));
-	GET_STACK(int, X, STACK_OFFS(0xD18, 0xCFC));
-	GET_STACK(int, Y, STACK_OFFS(0xD18, 0xD00));
-
-	auto pBldData = ImageDataMapHelper::GetImageDataFromMap(CLoadingExt::GetImageName(BldID, 0));
-	auto pData = ImageDataMapHelper::GetImageDataFromMap(CLoadingExt::GetImageName(ID, 0));
-
-	ppmfc::CString ArtID; // BldArtID
-	if (auto ppImage = Variables::Rules.TryGetString(BldID, "Image"))
-		ArtID = *ppImage;
-	else
-		ArtID = BldID;
-
-	X += CINI::Art->GetInteger(ArtID, "PowerUp2LocXX", 0);
-	Y += CINI::Art->GetInteger(ArtID, "PowerUp2LocYY", 0);
-
-	X += (pBldData->FullWidth - pData->FullWidth) / 2;
-	Y += (pBldData->FullHeight - pData->FullHeight) / 2;
-
-	R->ESI(X);
-	R->EDI(Y);
-
-	return 0x471BB8;
-}
-
-DEFINE_HOOK(4720D3, CIsoView_Draw_PowerUp3Loc_PosFix, 5)
-{
-	REF_STACK(const ppmfc::CString, ID, STACK_OFFS(0xD18, 0xBFC));
-	REF_STACK(const ppmfc::CString, BldID, STACK_OFFS(0xD18, 0xC08));
-	GET_STACK(int, X, STACK_OFFS(0xD18, 0xCFC));
-	GET_STACK(int, Y, STACK_OFFS(0xD18, 0xD00));
-
-	auto pBldData = ImageDataMapHelper::GetImageDataFromMap(CLoadingExt::GetImageName(BldID, 0));
-	auto pData = ImageDataMapHelper::GetImageDataFromMap(CLoadingExt::GetImageName(ID, 0));
-
-	ppmfc::CString ArtID; // BldArtID
-	if (auto ppImage = Variables::Rules.TryGetString(BldID, "Image"))
-		ArtID = *ppImage;
-	else
-		ArtID = BldID;
-
-	X += CINI::Art->GetInteger(ArtID, "PowerUp3LocXX", 0);
-	Y += CINI::Art->GetInteger(ArtID, "PowerUp3LocYY", 0);
-
-	X += (pBldData->FullWidth - pData->FullWidth) / 2;
-	Y += (pBldData->FullHeight - pData->FullHeight) / 2;
-
-	R->ESI(X);
-	R->EDI(Y);
-
-	return 0x47230B;
-}
-
-namespace CIsoViewDrawTemp
-{
-	int BuildingIndex;
-}
-
-DEFINE_HOOK(470986, CIsoView_Draw_BuildingImageDataQuery_1, 8)
-{
-	REF_STACK(ImageDataClass, image, STACK_OFFS(0xD18, 0xAFC));
-	REF_STACK(const CBuildingRenderData, data, STACK_OFFS(0xD18, 0xC0C));
-
-	int nFacing = 0;
-	if (Variables::Rules.GetBool(data.ID, "Turret"))
-		nFacing = 7 - (data.Facing / 32) % 8;
-
-	const int HP = CMapDataExt::CurrentRenderBuildingStrength;
-	int status = CLoadingExt::GBIN_NORMAL;
-	if (HP == 0)
-		status = CLoadingExt::GBIN_RUBBLE;
-	else if (static_cast<int>((CIsoViewDrawTemp::ConditionYellow + 0.001f) * 256) > HP)
-		status = CLoadingExt::GBIN_DAMAGED;
-
-	const auto& imageName = CLoadingExt::GetBuildingImageName(data.ID, nFacing, status);
-	image = *ImageDataMapHelper::GetImageDataFromMap(imageName);
-
-	CIsoViewDrawTemp::BuildingIndex = R->ESI();
-
-	return 0x4709E1;
-}
-
-DEFINE_HOOK(470AE3, CIsoView_Draw_BuildingImageDataQuery_2, 7)
-{
-	REF_STACK(ImageDataClass, image, STACK_OFFS(0xD18, 0xAFC));
-	REF_STACK(const CBuildingRenderData, data, STACK_OFFS(0xD18, 0xC0C));
-
-	int nFacing = 0;
-	if (Variables::Rules.GetBool(data.ID, "Turret"))
-		nFacing = (7 - data.Facing / 32) % 8;
-
-	const int HP = CMapDataExt::CurrentRenderBuildingStrength;
-	int status = CLoadingExt::GBIN_NORMAL;
-	if (HP == 0)
-		status = CLoadingExt::GBIN_RUBBLE;
-	else if (static_cast<int>((CIsoViewDrawTemp::ConditionYellow + 0.001f) * 256) > HP)
-		status = CLoadingExt::GBIN_DAMAGED;
-
-	const auto& imageName = CLoadingExt::GetBuildingImageName(data.ID, nFacing, status);
-	image = *ImageDataMapHelper::GetImageDataFromMap(imageName);
-
-	return 0x470B4D;
-}
-
-DEFINE_HOOK(4709EE, CIsoView_Draw_ShowBuildingOutline, 6)
-{
-	GET(CIsoViewExt*, pThis, EDI);
-	GET(int, X, EBX);
-	GET(int, Y, EBP);
-	GET_STACK(int, W, STACK_OFFS(0xD18, 0xCFC));
-	GET_STACK(int, H, STACK_OFFS(0xD18, 0xD00));
-	GET_STACK(COLORREF, dwColor, STACK_OFFS(0xD18, 0xD04));
-	LEA_STACK(LPDDSURFACEDESC2, lpDesc, STACK_OFFS(0xD18, 0x92C));
-
-	const auto& DataExt = CMapDataExt::BuildingDataExts[CIsoViewDrawTemp::BuildingIndex];
-	if (DataExt.IsCustomFoundation())
-		pThis->DrawLockedLines(*DataExt.LinesToDraw, X, Y, dwColor, false, false, lpDesc);
-	else
-		pThis->DrawLockedCellOutline(X, Y, W, H, dwColor, false, false, lpDesc);
-
-	return 0x470A38;
-}
-
-DEFINE_HOOK(4727B2, CIsoView_Draw_BasenodeOutline_CustomFoundation, B)
-{
-	CIsoViewDrawTemp::BuildingIndex = R->ESI();
-	return 0;
-}
-
-DEFINE_HOOK(47280B, CIsoView_Draw_BasenodeOutline, 6)
-{
-	GET_STACK(CIsoViewExt*, pThis, STACK_OFFS(0xD18, 0xCD4));
-	GET(int, X, EBX);
-	GET(int, Y, EBP);
-	GET_STACK(int, W, STACK_OFFS(0xD18, 0xCFC));
-	GET_STACK(int, H, STACK_OFFS(0xD18, 0xD00));
-	GET_STACK(COLORREF, dwColor, STACK_OFFS(0xD18, 0xB94));
-	LEA_STACK(LPDDSURFACEDESC2, lpDesc, STACK_OFFS(0xD18, 0x92C));
-
-	const auto& DataExt = CMapDataExt::BuildingDataExts[CIsoViewDrawTemp::BuildingIndex];
-	if (DataExt.IsCustomFoundation())
-	{
-		pThis->DrawLockedLines(*DataExt.LinesToDraw, X, Y, dwColor, true, false, lpDesc);
-		pThis->DrawLockedLines(*DataExt.LinesToDraw, X + 1, Y, dwColor, true, false, lpDesc);
-	}
-	else
-	{
-		pThis->DrawLockedCellOutline(X, Y, W, H, dwColor, true, false, lpDesc);
-		pThis->DrawLockedCellOutline(X + 1, Y, W, H, dwColor, true, false, lpDesc);
-	}
-
-	return 0x472884;
-}
-
-DEFINE_HOOK(4748DC, CIsoView_Draw_SkipCelltagAndWaypointDrawing, 9)
-{
-	return 0x474A91;
-}
-
-DEFINE_HOOK(474AE3, CIsoView_Draw_DrawCelltagAndWaypointAndTube_EarlyUnlock, 6)
-{
-	GET_STACK(CIsoViewExt*, pThis, STACK_OFFS(0xD18, 0xCD4));
-
-	pThis->lpDDBackBufferSurface->Unlock(nullptr);
-
-	return pThis ? 0x474AEF : 0x474DB3;
-}
-
-DEFINE_HOOK(474B9D, CIsoView_Draw_DrawCelltagAndWaypointAndTube_DrawStuff, 9)
-{
-	GET_STACK(CIsoViewExt*, pThis, STACK_OFFS(0xD18, 0xCD4));
-	REF_STACK(CellData, celldata, STACK_OFFS(0xD18, 0xC60));
-	int X = R->Stack<int>(STACK_OFFS(0xD18, 0xCE4)) - R->Stack<float>(STACK_OFFS(0xD18, 0xCB0));
-	int Y = R->Stack<int>(STACK_OFFS(0xD18, 0xCD0)) - R->Stack<float>(STACK_OFFS(0xD18, 0xCB8));
-
-	// We had unlocked it already, just blt them now
-	if (CIsoViewExt::DrawCelltags && celldata.CellTag != -1)
-		pThis->DrawCelltag(X, Y);
-	if (CIsoViewExt::DrawWaypoints && celldata.Waypoint != -1)
-		pThis->DrawWaypointFlag(X, Y);
-	if (CIsoViewExt::DrawTubes && celldata.Tube != -1)
-		pThis->DrawTube(&celldata, X, Y);
-
-	return 0x474D64;
-}
-
-DEFINE_HOOK(474DB7, CIsoView_Draw_DrawCelltagAndWaypointAndTube_SkipOriginUnlock, 6)
-{
-	GET(CIsoViewExt*, pThis, EBX);
-
-	R->EAX(pThis->lpDDBackBufferSurface);
-	R->EBP(&pThis->lpDDBackBufferSurface);
-
-	return 0x474DCE;
-}
-
-DEFINE_HOOK(474DDF, CIsoView_Draw_WaypointTexts, 5)
-{
-	if (CIsoViewExt::DrawWaypoints)
-	{
-		GET(CIsoViewExt*, pThis, EBX);
-
-		GET_STACK(HDC, hDC, STACK_OFFS(0xD18, 0xC68));
-		GET_STACK(int, jMin, STACK_OFFS(0xD18, 0xC10));
-		GET_STACK(int, iMin, STACK_OFFS(0xD18, 0xCBC));
-		GET_STACK(const int, jMax, STACK_OFFS(0xD18, 0xC64));
-		GET_STACK(const int, iMax, STACK_OFFS(0xD18, 0xC18));
-
-		SetTextColor(hDC, ExtConfigs::Waypoint_Color);
-		if (ExtConfigs::Waypoint_Background)
-		{
-			SetBkMode(hDC, OPAQUE);
-			SetBkColor(hDC, ExtConfigs::Waypoint_Background_Color);
-		}
-		else
-			SetBkMode(hDC, TRANSPARENT);
-		SetTextAlign(hDC, TA_CENTER);
-
-		auto pSection = CINI::CurrentDocument->GetSection("Waypoints");
-		for (int j = jMin; j < jMax; ++j)
-		{
-			for (int i = iMin; i < iMax; ++i)
-			{
-				int X = j, Y = i;
-
-				CIsoView::MapCoord2ScreenCoord(X, Y);
-				auto pCell = CMapData::Instance->TryGetCellAt(j, i);
-
-				int drawX = X - R->Stack<float>(STACK_OFFS(0xD18, 0xCB0)) + 30 + ExtConfigs::Waypoint_Text_ExtraOffset.x;
-				int drawY = Y - R->Stack<float>(STACK_OFFS(0xD18, 0xCB8)) - 15 + ExtConfigs::Waypoint_Text_ExtraOffset.y;
-
-				if (pCell->Waypoint != -1)
-				{
-					auto pWP = *pSection->GetKeyAt(pCell->Waypoint);
-					TextOut(hDC, drawX, drawY, pWP, strlen(pWP));
-				}
-
-			}
-		}
-
-		SetTextAlign(hDC, TA_LEFT);
-		SetTextColor(hDC, RGB(0, 0, 0));
-	}
-
-	return CIsoViewExt::DrawBounds ? 0 : 0x474FE0;
 }
 
 DEFINE_HOOK(46BDFA, CIsoView_DrawMouseAttachedStuff_Structure, 5)
@@ -432,17 +100,6 @@ DEFINE_HOOK(46BDFA, CIsoView_DrawMouseAttachedStuff_Structure, 5)
 		CMapData::Instance->SetBuildingData(nullptr, CIsoView::CurrentCommand->ObjectID, CIsoView::CurrentHouse(), nMapCoord, "");
 
 	return 0x46BF98;
-}
-
-DEFINE_HOOK(4676CB, CIsoView_OnLeftButtonUp_AddTube, 6)
-{
-	GET(CIsoViewExt*, pThis, ESI);
-	GET(const int, nDestX, EBX);
-	GET(const int, nDestY, EDI);
-
-	pThis->AddTube(pThis->StartCell.X, pThis->StartCell.Y, nDestX, nDestY);
-
-	return 0x468548;
 }
 
 DEFINE_HOOK(470502, CIsoView_Draw_OverlayOffset, 5)
@@ -469,7 +126,9 @@ DEFINE_HOOK(470502, CIsoView_Draw_OverlayOffset, 5)
 			nOffset += 15;
 		else if (nOverlay < CMapDataExt::OverlayTypeDatas.size())
 		{
-			if (CMapDataExt::OverlayTypeDatas[nOverlay].Rock)
+			if (CMapDataExt::OverlayTypeDatas[nOverlay].Rock 
+				//|| CMapDataExt::OverlayTypeDatas[nOverlay].TerrainRock // for compatibility of blockages
+				|| CMapDataExt::OverlayTypeDatas[nOverlay].RailRoad)
 				nOffset += 15;
 		}
 	}
@@ -484,4 +143,1238 @@ DEFINE_HOOK(470502, CIsoView_Draw_OverlayOffset, 5)
 	R->EAX(nOffset);
 
 	return 0x470574;
+}
+
+DEFINE_HOOK(457E9D, CIsoView_OnMouseMove_AutoLAT, 6)
+{
+    CMapDataExt::SmoothAll();
+    return 0x459AA8;
+}
+
+DEFINE_HOOK(46242B, CIsoView_OnLBButtonDown_AutoLAT, 6)
+{
+    CMapDataExt::SmoothAll();
+    return 0x463F19;
+}
+
+DEFINE_HOOK(45EC07, CIsoView_OnCommand_Skip_wParamCheck, 9)
+{
+	return 0x45EC10;
+}
+
+DEFINE_HOOK(45CDB8, CIsoView_OnMouseMove_SkipOverlayUndoRedo1, 6)
+{
+	if (!ExtConfigs::UndoRedo_HoldPlaceOverlay)
+		return 0;
+	return 0x45CDCC;
+}
+
+DEFINE_HOOK(45CD4F, CIsoView_OnMouseMove_SkipOverlayUndoRedo2, 6)
+{
+	if (!ExtConfigs::UndoRedo_HoldPlaceOverlay)
+		return 0;
+	return 0x45CD6D;
+}
+
+DEFINE_HOOK(46684D, CIsoView_OnLButtonDown_OverlayUndoRedo, 6)
+{
+	if (!ExtConfigs::UndoRedo_HoldPlaceOverlay)
+		return 0;
+
+	if (CIsoView::CurrentCommand->Command == 0x1 && CIsoView::CurrentCommand->Type == 6)
+	{
+		CMapData::Instance->SaveUndoRedoData(true, 0, 0, 0, 0);
+	}
+
+	return 0;
+}
+
+bool IsPlacingTiles = false;
+DEFINE_HOOK(46855D, CIsoView_OnLButtonUp_OverlayUndoRedo, 5)
+{
+	IsPlacingTiles = false;
+
+	if (!ExtConfigs::UndoRedo_HoldPlaceOverlay)
+		return 0;
+
+	return 0;
+}
+
+DEFINE_HOOK(45B545, CIsoView_OnMouseMove_SkipPlaceTileUndoRedo_Notify, 7)
+{
+	if (!IsPlacingTiles || !ExtConfigs::UndoRedo_ShiftPlaceTile)
+		CMapData::Instance->SaveUndoRedoData(true, 0, 0, 0, 0);
+	IsPlacingTiles = true;
+
+	return 0;
+}
+
+DEFINE_HOOK(461A37, CIsoView_OnLButtonDown_SkipPlaceTileUndoRedo1, 7)
+{
+	if (!IsPlacingTiles || !ExtConfigs::UndoRedo_ShiftPlaceTile)
+		return 0;
+	return 0x461A5B;
+}
+
+DEFINE_HOOK(46D620, CIsoView_FillArea, 9)
+{
+	GET_STACK(int, dwX, 0x4);
+	GET_STACK(int, dwY, 0x8);
+	GET_STACK(int, dwID, 0xC);
+	GET_STACK(byte, bSubTile, 0x10);
+
+	CIsoViewExt::FillArea(dwX, dwY, dwID, bSubTile, dwX, dwY);
+
+	return 0x46D808;
+}
+
+DEFINE_HOOK(461A37, CIsoView_PlaceTile_FixUndo, 7)
+{
+	GET(CIsoView*, pIsoView, EBX);
+	GET(int, x, EDI);
+	GET(int, ym6, ECX);
+	int y = ym6 + 6;
+	if (CIsoView::CurrentCommand->Type >= CMapDataExt::TileDataCount || CIsoView::CurrentCommand->Type < 0) {
+		return 0;
+	}
+	auto tiledata = CMapDataExt::TileData[CIsoView::CurrentCommand->Type];
+
+	CMapData::Instance->SaveUndoRedoData(true,
+		x - tiledata.Height - 4,
+		y - tiledata.Width - 4,
+		x - tiledata.Height + pIsoView->BrushSizeX * tiledata.Height + 7,
+		y - tiledata.Width + pIsoView->BrushSizeY * tiledata.Width + 7);
+	return 0x461A5B;
+}
+
+DEFINE_HOOK(461C3E, CIsoView_OnLButtonDown_PlaceTile_SkipHide, 6)
+{
+	if (!ExtConfigs::PlaceTileSkipHide)
+		return 0;
+
+	GET_BASE(int, X, -0x64);
+	GET(int, Y, EDX);
+	const auto cell = CMapData::Instance->TryGetCellAt(X, Y);
+	return cell->IsHidden() ? 0x4622F2 : 0;
+}
+
+DEFINE_HOOK(457648, CIsoView_OnMouseMove_PlaceTile_SkipHide, B)
+{
+	if (!ExtConfigs::PlaceTileSkipHide)
+		return 0;
+
+	GET_STACK(int, X, STACK_OFFS(0x3D528, 0x3D4E0));
+	GET(int, Y, EAX);
+	const auto cell = CMapData::Instance->TryGetCellAt(X, Y);
+	return cell->IsHidden() ? 0x457D11 : 0;
+}
+
+DEFINE_HOOK(469410, CIsoView_ReInitializeDDraw_ReloadFA2SPHESettings, 6)
+{
+	auto currentLighting = CFinalSunDlgExt::CurrentLighting;
+	Logger::Debug("CIsoView::ReInitializeDDraw(): About to call InitializeAllHdmEdition()\n");
+	CMapDataExt::InitializeAllHdmEdition(false, false);
+	CViewObjectsExt::Redraw_ConnectedTile(nullptr);
+	CFinalSunDlgExt::CurrentLighting = currentLighting;
+	// fix desert bug
+	auto thisTheater = CINI::CurrentDocument().GetString("Map", "Theater");
+	if (thisTheater == "DESERT")
+	{
+		CTileTypeClass::Instance = &CTileTypeInfo::Desert->Datas;
+		CTileTypeClass::InstanceCount = &CTileTypeInfo::Desert->Count;
+		CMapDataExt::TileData = CTileTypeInfo::Desert().Datas;
+		CMapDataExt::TileDataCount = CTileTypeInfo::Desert().Count;
+		CLoading::Instance()->FreeTMPs();
+		CLoading::Instance()->InitTMPs();
+	}
+	if (CFinalSunDlgExt::CurrentLighting != 31000)
+	{
+		CheckMenuRadioItem(*CFinalSunDlg::Instance->GetMenu(), 31000, 31003, CFinalSunDlgExt::CurrentLighting, MF_UNCHECKED);
+		LightingSourceTint::CalculateMapLamps();
+
+		CFinalSunDlg::Instance->MyViewFrame.pIsoView->RedrawWindow(nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW);
+		auto tmp = CIsoView::CurrentCommand->Command;
+		if (CFinalSunDlg::Instance->MyViewFrame.pTileSetBrowserFrame->View.CurrentMode == 1) {
+			HWND hParent = CFinalSunDlg::Instance->MyViewFrame.pTileSetBrowserFrame->DialogBar.GetSafeHwnd();
+			HWND hTileComboBox = ::GetDlgItem(hParent, 1366);
+			::SendMessage(hParent, WM_COMMAND, MAKEWPARAM(1366, CBN_SELCHANGE), (LPARAM)hTileComboBox);
+			CIsoView::CurrentCommand->Command = tmp;
+		}
+	}
+
+	return 0;
+}
+
+DEFINE_HOOK(46A362, CIsoView_UpdateStatusBar_BuildingID, 6)
+{
+	R->ESI(CMapDataExt::StructureIndexMap[R->ESI()]);
+	return 0;
+}
+
+DEFINE_HOOK(461766, CIsoView_OnLButtonDown_DragObjects, 5)
+{
+	auto pThis = CIsoView::GetInstance();
+	if (CIsoView::CurrentCommand->Command != 0 || pThis->LeftButtonDoubleClick_8C != FALSE || pThis->Drag == TRUE)
+	{
+		return 0x461964;
+	}
+	int pos = CMapData::Instance->GetCoordIndex(pThis->StartCell.X, pThis->StartCell.Y);
+	auto cell = CMapData::Instance->TryGetCellAt(pos);
+	pThis->CurrentCellObjectIndex = -1;
+	pThis->CurrentCellObjectType = -1;
+	if (CIsoViewExt::DrawInfantries)
+	{
+		const auto& filter = CIsoViewExt::VisibleInfantries;
+		if (!ExtConfigs::InfantrySubCell_Edit)
+		{
+			pThis->CurrentCellObjectIndex = CMapDataExt::GetInfantryAt(pos);
+		}
+		else
+		{
+			pThis->CurrentCellObjectIndex = CIsoViewExt::GetSelectedSubcellInfantryIdx(pThis->StartCell.X, pThis->StartCell.Y);
+		}
+		if (CIsoViewExt::DrawInfantriesFilter && filter.find(pThis->CurrentCellObjectIndex) == filter.end())
+			pThis->CurrentCellObjectIndex = -1;
+		pThis->CurrentCellObjectType = 0;
+	}
+	if (CIsoViewExt::DrawAircrafts && pThis->CurrentCellObjectIndex < 0)
+	{
+		pThis->CurrentCellObjectIndex = cell->Aircraft;
+		const auto& filter = CIsoViewExt::VisibleAircrafts;
+		if (CIsoViewExt::DrawAircraftsFilter && filter.find(pThis->CurrentCellObjectIndex) == filter.end())
+			pThis->CurrentCellObjectIndex = -1;
+		pThis->CurrentCellObjectType = 2;
+	}
+	if (CIsoViewExt::DrawUnits && pThis->CurrentCellObjectIndex < 0)
+	{
+		pThis->CurrentCellObjectIndex = cell->Unit;
+		const auto& filter = CIsoViewExt::VisibleUnits;
+		if (CIsoViewExt::DrawUnitsFilter && filter.find(pThis->CurrentCellObjectIndex) == filter.end())
+			pThis->CurrentCellObjectIndex = -1;
+		pThis->CurrentCellObjectType = 3;
+	}
+	if (CIsoViewExt::DrawStructures && pThis->CurrentCellObjectIndex < 0)
+	{
+		pThis->CurrentCellObjectIndex = cell->Structure;
+		pThis->CurrentCellObjectType = 1;
+		if (cell->Structure < CMapDataExt::StructureIndexMap.size())
+		{
+			auto StrINIIndex = CMapDataExt::StructureIndexMap[cell->Structure];
+			if (StrINIIndex != -1)
+			{
+				const auto& filter = CIsoViewExt::VisibleStructures;
+				if (CIsoViewExt::DrawStructuresFilter && filter.find(StrINIIndex) == filter.end())
+					pThis->CurrentCellObjectIndex = -1;
+				else
+				{
+					const auto& objRender = CMapDataExt::BuildingRenderDatasFix[StrINIIndex];
+					pThis->StartCell.X = objRender.X;
+					pThis->StartCell.Y = objRender.Y;
+				}
+			}
+			else
+			{
+				pThis->CurrentCellObjectIndex = -1;
+			}
+		}
+		else
+		{
+			pThis->CurrentCellObjectIndex = -1;
+		}
+	}
+	if (CIsoViewExt::DrawTerrains && pThis->CurrentCellObjectIndex < 0)
+	{
+		pThis->CurrentCellObjectIndex = cell->Terrain;
+		pThis->CurrentCellObjectType = 4;
+	}
+	if (CIsoViewExt::DrawWaypoints && pThis->CurrentCellObjectIndex < 0)
+	{
+		pThis->CurrentCellObjectIndex = cell->Waypoint;
+		pThis->CurrentCellObjectType = 6;
+	}
+	if (CIsoViewExt::DrawCelltags && pThis->CurrentCellObjectIndex < 0)
+	{
+		pThis->CurrentCellObjectIndex = cell->CellTag;
+		pThis->CurrentCellObjectType = 5;
+	}
+	if (CIsoViewExt::DrawBasenodes && pThis->CurrentCellObjectIndex < 0)
+	{
+		if (cell->BaseNode.BasenodeID > -1)
+		{
+			auto& cellExt = CMapDataExt::CellDataExts[pos];
+			const auto& node = cellExt.BaseNodes[0];
+			pThis->CurrentCellObjectIndex = cell->BaseNode.BasenodeID;
+			CIsoViewExt::CurrentCellObjectHouse = cell->BaseNode.House;
+			pThis->StartCell.X = node.X;
+			pThis->StartCell.Y = node.Y;
+			pThis->CurrentCellObjectType = 8;
+		}
+	}
+	if (CIsoViewExt::DrawSmudges && pThis->CurrentCellObjectIndex < 0)
+	{
+		pThis->CurrentCellObjectIndex = cell->Smudge;
+		pThis->CurrentCellObjectType = 9;
+	}
+	if (pThis->CurrentCellObjectIndex < 0)
+	{
+		if (CMapDataExt::HasAnnotation(pos))
+		{
+			pThis->CurrentCellObjectIndex = pos;
+			pThis->CurrentCellObjectType = 7;
+		}
+	}
+	if (pThis->CurrentCellObjectIndex < 0)
+	{
+		return 0x461964;
+	}
+	pThis->Drag = TRUE;
+	pThis->Moved = FALSE;
+	return 0x46686A;
+}
+
+static UINT nLButtonUpFlags = 0;
+DEFINE_HOOK(466970, CIsoView_OnLButtonUp_GetnFlags, 6)
+{
+	nLButtonUpFlags = R->Stack<UINT>(0x4);
+	return 0;
+}
+
+DEFINE_HOOK(466DDE, CIsoView_OnLButtonUp_DragOthers, 7)
+{
+	auto isoView = CIsoView::GetInstance();
+	auto& m_id = isoView->CurrentCellObjectIndex;
+	auto& m_type = isoView->CurrentCellObjectType;
+
+	//annotation
+	if (m_type == 7)
+	{
+		CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Annotation);
+		int X = R->EBX();
+		int	Y = R->EDI();
+
+		int oldX = CMapData::Instance->GetXFromCoordIndex(m_id);
+		int oldY = CMapData::Instance->GetYFromCoordIndex(m_id);
+		ppmfc::CString key;
+		key.Format("%d", oldX * 1000 + oldY);
+		if (CINI::CurrentDocument->KeyExists("Annotations", key))
+		{
+			auto value = CINI::CurrentDocument->GetString("Annotations", key);
+			if (nLButtonUpFlags != MK_SHIFT)
+			{
+				auto& cellExt = CMapDataExt::CellDataExts[CMapData::Instance->GetCoordIndex(oldX, oldY)];
+				cellExt.HasAnnotation = false;
+				CINI::CurrentDocument->DeleteKey("Annotations", key);
+			}
+			key.Format("%d", X * 1000 + Y);
+			CINI::CurrentDocument->WriteString("Annotations", key, value);
+			auto& cellExt = CMapDataExt::CellDataExts[CMapData::Instance->GetCoordIndex(X, Y)];
+			cellExt.HasAnnotation = true;
+		}
+		m_id = -1;
+		m_type = -1;
+	}
+	//base nodes
+	if (m_type == 8)
+	{
+		CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Basenode);
+		int X = R->EBX();
+		int	Y = R->EDI();
+		char key[10];
+		sprintf(key, "%03d", m_id);
+		if (CINI::CurrentDocument->KeyExists(CIsoViewExt::CurrentCellObjectHouse, key))
+		{
+			auto atoms = STDHelpers::SplitString(CINI::CurrentDocument->GetString(CIsoViewExt::CurrentCellObjectHouse, key), 2);
+			ppmfc::CString value;
+			value.Format("%s,%d,%d", atoms[0], Y, X);
+			if (nLButtonUpFlags == MK_SHIFT)
+			{
+				int nodeCount = CINI::CurrentDocument->GetInteger(CIsoViewExt::CurrentCellObjectHouse, "NodeCount");
+				if (nodeCount < 1000)
+				{
+					for (int i = 0; i < 1000; ++i)
+					{
+						sprintf(key, "%03d", i);
+						if (!CINI::CurrentDocument->KeyExists(CIsoViewExt::CurrentCellObjectHouse, key))
+						{
+							break;
+						}
+					}
+					char count[10];
+					sprintf(count, "%d", nodeCount + 1);
+					CINI::CurrentDocument->WriteString(CIsoViewExt::CurrentCellObjectHouse, "NodeCount", count);
+				}
+			}
+			CINI::CurrentDocument->WriteString(CIsoViewExt::CurrentCellObjectHouse, key, value);
+			CMapData::Instance->UpdateFieldBasenodeData(false);
+		}
+		m_id = -1;
+		m_type = -1;
+	}
+	//smudges
+	if (m_type == 9)
+	{
+		CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Smudge);
+		int X = R->EBX();
+		int	Y = R->EDI();
+		auto smudge = CMapData::Instance->SmudgeDatas[m_id];
+		smudge.X = Y;
+		smudge.Y = X;
+		if (nLButtonUpFlags != MK_SHIFT)
+			CMapData::Instance->DeleteSmudgeData(m_id);
+		CMapData::Instance->SetSmudgeData(&smudge);
+		m_id = -1;
+		m_type = -1;
+	}
+	return 0;
+}
+
+DEFINE_HOOK(466E00, CIsoView_OnLButtonUp_DragFacing, 7)
+{
+	if (nLButtonUpFlags == MK_CONTROL)
+	{
+		auto Map = &CMapData::Instance();
+		auto isoView = CIsoView::GetInstance();
+		auto m_id = isoView->CurrentCellObjectIndex;
+		auto m_type = isoView->CurrentCellObjectType;
+
+		int X = R->EBX();
+		int	Y = R->EDI();
+		MapCoord newMapCoord = { X,Y };
+
+		//order: inf unit air str
+		if (m_type == 0)
+		{
+			CInfantryData infantry;
+			CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Infantry);
+			Map->GetInfantryData(m_id, infantry);
+			auto oldMapCoord = MapCoord{ atoi(infantry.X), atoi(infantry.Y) };
+			infantry.Facing = CMapDataExt::GetFacing(oldMapCoord, newMapCoord, infantry.Facing, ExtConfigs::ExtFacings_Drag ? 32 : 8);
+			Map->DeleteInfantryData(m_id);
+			Map->SetInfantryData(&infantry, NULL, NULL, 0, -1);
+		}
+		else if (m_type == 3)
+		{
+			CUnitData unit;
+			CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Unit);
+			Map->GetUnitData(m_id, unit);
+			auto oldMapCoord = MapCoord{ atoi(unit.X), atoi(unit.Y) };
+			unit.Facing = CMapDataExt::GetFacing(oldMapCoord, newMapCoord, unit.Facing, ExtConfigs::ExtFacings_Drag ? 32 : 8);
+			Map->DeleteUnitData(m_id);
+			Map->SetUnitData(&unit, NULL, NULL, 0, "");
+		}
+		else if (m_type == 2)
+		{
+			CAircraftData aircraft;
+			CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Aircraft);
+			Map->GetAircraftData(m_id, aircraft);
+			auto oldMapCoord = MapCoord{ atoi(aircraft.X), atoi(aircraft.Y) };
+			aircraft.Facing = CMapDataExt::GetFacing(oldMapCoord, newMapCoord, aircraft.Facing, ExtConfigs::ExtFacings_Drag ? 32 : 8);
+			Map->DeleteAircraftData(m_id);
+			Map->SetAircraftData(&aircraft, NULL, NULL, 0, "");
+		}
+		else if (m_type == 1)
+		{
+			CBuildingData structure;
+			CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Building);
+			Map->GetBuildingData(m_id, structure);
+			auto oldMapCoord = MapCoord{ atoi(structure.X), atoi(structure.Y) };
+			structure.Facing = CMapDataExt::GetFacing(oldMapCoord, newMapCoord, structure.Facing, ExtConfigs::ExtFacings_Drag ? 32 : 8);
+			Map->DeleteBuildingData(m_id);
+			Map->SetBuildingData(&structure, NULL, NULL, 0, "");
+		}
+
+		return 0x467682;
+	}
+
+	return 0;
+}
+
+DEFINE_HOOK(4576C6, CIsoView_OnMouseMove_NoRndForBridge, 6)
+{
+	GET_STACK(DWORD, dwID, STACK_OFFS(0x3D528, 0x3D450));
+
+	if (dwID < *CTileTypeClass::InstanceCount)
+		if (CMapDataExt::TileData[dwID].TileSet == CMapDataExt::WoodBridgeSet)
+			return 0x4577F7;
+
+	return 0x4576CC;
+}
+
+DEFINE_HOOK(461CDB, CIsoView_OnLButtonDown_NoRndForBridge, 6)
+{
+	GET(DWORD, dwID6, EDI);
+	int dwID = dwID6 >> 6;
+	if (dwID < *CTileTypeClass::InstanceCount)
+		if (CMapDataExt::TileData[dwID].TileSet == CMapDataExt::WoodBridgeSet)
+			return 0x461DEE;
+
+	return 0x461CE1;
+}
+
+DEFINE_HOOK(45EBE0, CIsoView_OnCommand_ConfirmTube, 7)
+{
+	if (CIsoViewExt::IsPressingTube)
+	{
+		if (CIsoViewExt::TubeNodes.front() == CIsoViewExt::TubeNodes.back())
+			return 0;
+
+		((CIsoViewExt*)CIsoView::GetInstance())->ConfirmTube(CIsoView::CurrentCommand->Type == 0);
+
+		CIsoViewExt::IsPressingTube = false;
+		::RedrawWindow(CFinalSunDlg::Instance->MyViewFrame.pIsoView->m_hWnd, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
+		return 0x45EDB6;
+	}
+	return 0;
+}
+
+DEFINE_HOOK(45C850, CIsoView_OnMouseMove_Delete, 5)
+{
+	auto pIsoView = (CIsoViewExt*)CIsoView::GetInstance();
+	auto point = pIsoView->GetCurrentMapCoord(pIsoView->MouseCurrentPosition);
+
+	auto makeOrAppendRecord = [](int recordType)
+		{
+			if (!ObjectRecord::ObjectRecord_HoldingPtr)
+				ObjectRecord::ObjectRecord_HoldingPtr = CMapDataExt::MakeObjectRecord(recordType, true);
+			else
+				ObjectRecord::ObjectRecord_HoldingPtr->appendRecord(recordType);
+		};
+
+	for (int gx = point.X - pIsoView->BrushSizeX / 2; gx <= point.X + pIsoView->BrushSizeX / 2; gx++)
+	{
+		for (int gy = point.Y - pIsoView->BrushSizeY / 2; gy <= point.Y + pIsoView->BrushSizeY / 2; gy++)
+		{
+			if (!CMapDataExt::IsCoordInFullMap(gx, gy))
+				continue;
+
+			int nIndex = CMapData::Instance->GetCoordIndex(gx, gy);
+			const auto& CellData = CMapData::Instance->CellDatas[nIndex];
+
+			if (CellData.Structure != -1)
+			{
+				makeOrAppendRecord(ObjectRecord::RecordType::Building);
+				CMapData::Instance->DeleteBuildingData(CellData.Structure);
+			}
+
+			if (ExtConfigs::InfantrySubCell_Edit &&
+				pIsoView->BrushSizeX == 1 && pIsoView->BrushSizeY == 1)
+			{
+				int idx = CIsoViewExt::GetSelectedSubcellInfantryIdx(point.X, point.Y);
+				if (idx != -1)
+				{
+					makeOrAppendRecord(ObjectRecord::RecordType::Infantry);
+					CMapData::Instance->DeleteInfantryData(idx);
+				}
+			}
+			else
+			{
+				if (CellData.Infantry[0] != -1)
+				{
+					makeOrAppendRecord(ObjectRecord::RecordType::Infantry);
+					CMapData::Instance->DeleteInfantryData(CellData.Infantry[0]);
+				}
+				if (CellData.Infantry[1] != -1)
+				{
+					makeOrAppendRecord(ObjectRecord::RecordType::Infantry);
+					CMapData::Instance->DeleteInfantryData(CellData.Infantry[1]);
+				}
+				if (CellData.Infantry[2] != -1)
+				{
+					makeOrAppendRecord(ObjectRecord::RecordType::Infantry);
+					CMapData::Instance->DeleteInfantryData(CellData.Infantry[2]);
+				}
+			}
+			if (CellData.Unit != -1)
+			{
+				makeOrAppendRecord(ObjectRecord::RecordType::Unit);
+				CMapData::Instance->DeleteUnitData(CellData.Unit);
+			}
+
+			if (CellData.Aircraft != -1)
+			{
+				makeOrAppendRecord(ObjectRecord::RecordType::Aircraft);
+				CMapData::Instance->DeleteAircraftData(CellData.Aircraft);
+			}
+			
+			if (CellData.Terrain != -1)
+			{
+				makeOrAppendRecord(ObjectRecord::RecordType::Terrain);
+				CMapData::Instance->DeleteTerrainData(CellData.Terrain);
+			}
+			
+			if (CellData.Smudge != -1)
+			{
+				makeOrAppendRecord(ObjectRecord::RecordType::Smudge);
+				CMapData::Instance->DeleteSmudgeData(CellData.Smudge);
+			}
+		}
+	}
+	::RedrawWindow(CFinalSunDlg::Instance->MyViewFrame.pIsoView->m_hWnd, 0, 0, RDW_UPDATENOW | RDW_INVALIDATE);
+
+	return 0x45C961;
+}
+
+DEFINE_HOOK(45EC1A, CIsoView_OnCommand_HandleProperty, A)
+{
+	auto pIsoView = CIsoView::GetInstance();
+	auto& coord = pIsoView->StartCell;
+	auto cell = CMapData::Instance->TryGetCellAt(coord.X, coord.Y);
+	int pos = CMapData::Instance->GetCoordIndex(coord.X, coord.Y);
+
+	int index = -1;
+	int type = -1;
+	if (CIsoViewExt::DrawInfantries)
+	{
+		const auto& filter = CIsoViewExt::VisibleInfantries;
+		if (!ExtConfigs::InfantrySubCell_Edit)
+		{
+			index = CMapDataExt::GetInfantryAt(pos);
+		}
+		else
+		{
+			index = CIsoViewExt::GetSelectedSubcellInfantryIdx(pIsoView->StartCell.X, pIsoView->StartCell.Y);
+		}
+		if (CIsoViewExt::DrawInfantriesFilter && filter.find(index) == filter.end())
+			index = -1;
+		type = 0;
+	}
+	if (CIsoViewExt::DrawAircrafts && index < 0)
+	{
+		index = cell->Aircraft;
+		const auto& filter = CIsoViewExt::VisibleAircrafts;
+		if (CIsoViewExt::DrawAircraftsFilter && filter.find(index) == filter.end())
+			index = -1;
+		type = 2;
+	}
+	if (CIsoViewExt::DrawUnits && index < 0)
+	{
+		index = cell->Unit;
+		const auto& filter = CIsoViewExt::VisibleUnits;
+		if (CIsoViewExt::DrawUnitsFilter && filter.find(index) == filter.end())
+			index = -1;
+		type = 3;
+	}
+	if (CIsoViewExt::DrawStructures && index < 0)
+	{
+		index = cell->Structure;
+		type = 1;
+		if (cell->Structure < CMapDataExt::StructureIndexMap.size())
+		{
+			auto StrINIIndex = CMapDataExt::StructureIndexMap[cell->Structure];
+			if (StrINIIndex != -1)
+			{
+				const auto& filter = CIsoViewExt::VisibleStructures;
+				if (CIsoViewExt::DrawStructuresFilter && filter.find(StrINIIndex) == filter.end())
+					index = -1;
+				else
+				{
+					const auto& objRender = CMapDataExt::BuildingRenderDatasFix[StrINIIndex];
+					pIsoView->StartCell.X = objRender.X;
+					pIsoView->StartCell.Y = objRender.Y;
+				}
+			}
+			else
+			{
+				index = -1;
+			}
+		}
+		else
+		{
+			index = -1;
+		}
+	}
+	if (index > -1 && type > -1)
+	{
+		if (type == 0 && !ExtConfigs::InfantrySubCell_Edit)
+		{
+			for (int i = 0; i < 3; ++i)
+			{
+				if (cell->Infantry[i] > -1)
+					pIsoView->HandleProperties(cell->Infantry[i], 0);
+			}
+		}
+		else
+			pIsoView->HandleProperties(index, type);
+	}
+
+	if (pos < CMapData::Instance->CellDataCount)
+	{
+		ppmfc::CString key;
+		key.Format("%d", coord.X * 1000 + coord.Y);
+		if (CINI::CurrentDocument->KeyExists("Annotations", key))
+		{
+			auto atoms = STDHelpers::SplitString(CINI::CurrentDocument->GetString("Annotations", key), 6);
+			ppmfc::CString value;
+			bool folded = STDHelpers::IsTrue(atoms[2]);
+			for (int i = 0; i < atoms.size(); ++i)
+			{
+				if (i != 0)
+					value += ",";
+				if (i != 2)
+					value += atoms[i];
+				else
+				{
+					if (folded)
+						value += "no";
+					else
+						value += "yes";
+				}
+			}
+			CINI::CurrentDocument->WriteString("Annotations", key, value);
+			::RedrawWindow(CFinalSunDlg::Instance->MyViewFrame.pIsoView->m_hWnd, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
+		}
+	}
+
+	return 0x45ED9E;
+}
+
+DEFINE_HOOK(46CB77, CIsoView_DrawMouseAttachedStuff_Overlay_1, 6)
+{
+	GET(int, pos, ESI);
+	CMapDataExt::GetExtension()->SetNewOverlayAt(pos, CIsoView::CurrentCommand->Overlay);
+	return 0x46CB89;
+}
+
+DEFINE_HOOK(46CC03, CIsoView_DrawMouseAttachedStuff_Overlay_2, 5)
+{
+	GET(int, pos, ESI);
+	GET(int, i, EBP);
+	GET(int, e, EDI);
+	CMapDataExt::GetExtension()->SetNewOverlayAt(pos + i + e * CMapData::Instance->MapWidthPlusHeight, CIsoView::CurrentCommand->Overlay);
+	return 0x46CC21;
+}
+
+DEFINE_HOOK(46CC5C, CIsoView_DrawMouseAttachedStuff_Overlay_3, 5)
+{
+	GET(int, pos, ESI);
+	CMapDataExt::GetExtension()->SetNewOverlayAt(pos, CIsoView::CurrentCommand->Overlay);
+	return 0x46CC86;
+}
+
+DEFINE_HOOK(45A08A, CIsoView_OnMouseMove_Place, 5)
+{
+	auto Map = CMapDataExt::GetExtension();
+	auto pIsoView = (CIsoViewExt*)CIsoView::GetInstance();
+	auto point = pIsoView->GetCurrentMapCoord(pIsoView->MouseCurrentPosition);
+	const int& x = point.X;
+	const int& y = point.Y;
+
+	std::unique_ptr<CellData[]> oldData = std::make_unique<CellData[]>(32 * 32);
+	WORD oldNewOverlay[32][32];
+	int i, e;
+
+	for (i = 0; i < 32; i++)
+	{
+		for (e = 0; e < 32; e++)
+		{
+			DWORD dwPos = i + x + (e + y) * Map->MapWidthPlusHeight;
+			if (dwPos >= Map->CellDataCount)
+				continue;
+
+			auto& cur_fieldExt = Map->CellDataExts[dwPos];
+			oldData[i * 32 + e] = *Map->GetCellAt(i + x + (e + y) * Map->MapWidthPlusHeight);
+			oldNewOverlay[i][e] = cur_fieldExt.NewOverlay;
+		}
+	}
+	int money = Map->MoneyCount;
+
+	pIsoView->DrawMouseAttachedStuff(x, y);
+	::RedrawWindow(pIsoView->m_hWnd, 0, 0, RDW_UPDATENOW | RDW_INVALIDATE);
+
+	for (i = 0; i < 32; i++)
+	{
+		for (e = 0; e < 32; e++)
+		{
+			DWORD dwPos = i + x + (e + y) * Map->MapWidthPlusHeight;
+			if (dwPos >= Map->CellDataCount)
+				continue;
+
+			auto cur_field = Map->GetCellAt(dwPos);
+			auto& cur_fieldExt = Map->CellDataExts[dwPos];
+
+			if (cur_field->Aircraft != oldData[i * 32 + e].Aircraft)
+				Map->DeleteAircraftData(cur_field->Aircraft);
+
+			int z;
+			for (z = 0; z < 3; z++)
+				if (cur_field->Infantry[z] != oldData[i * 32 + e].Infantry[z])
+				{
+					Map->DeleteInfantryData(cur_field->Infantry[z]);
+				}
+
+			if (cur_field->Structure != oldData[i * 32 + e].Structure)
+				Map->DeleteBuildingData(cur_field->Structure);
+
+			if (cur_field->Terrain != oldData[i * 32 + e].Terrain)
+				Map->DeleteTerrainData(cur_field->Terrain);
+
+			if (cur_field->Smudge != oldData[i * 32 + e].Smudge)
+				Map->DeleteSmudgeData(cur_field->Smudge);
+
+			if (cur_field->Unit != oldData[i * 32 + e].Unit)
+				Map->DeleteUnitData(cur_field->Unit);
+
+			if (cur_fieldExt.NewOverlay != oldNewOverlay[i][e])
+				Map->SetNewOverlayAt(dwPos, oldNewOverlay[i][e]);
+
+			if (cur_field->OverlayData != oldData[i * 32 + e].OverlayData)
+				Map->SetOverlayDataAt(dwPos, oldData[i * 32 + e].OverlayData);
+
+			Map->DeleteTiberium(std::min(cur_fieldExt.NewOverlay, (word)0xFF), cur_field->OverlayData);
+			Map->AssignCellData(Map->CellDatas[dwPos], oldData[i * 32 + e]);
+			cur_fieldExt.NewOverlay = oldNewOverlay[i][e];
+			Map->AddTiberium(std::min(cur_fieldExt.NewOverlay, (word)0xFF), cur_field->OverlayData);
+		}
+	}
+	Map->MoneyCount = money;
+
+	return 0x45AEF6;
+}
+
+DEFINE_HOOK(4C4480, CIsoView_SmoothTiberium, 5)
+{
+	GET_STACK(int, dwPos, 0x4);
+
+	static int _adj[9] = { 0,1,3,4,6,7,8,10,11 };
+	auto Map = CMapDataExt::GetExtension();
+	auto pIsoView = (CIsoViewExt*)CIsoView::GetInstance();
+
+	auto& ovrl = Map->CellDataExts[dwPos].NewOverlay;
+	auto& ovrld = Map->CellDatas[dwPos].OverlayData;
+
+	if (!(ovrl >= RIPARIUS_BEGIN && ovrl <= RIPARIUS_END) &&
+		!(ovrl >= CRUENTUS_BEGIN && ovrl <= CRUENTUS_END) &&
+		!(ovrl >= VINIFERA_BEGIN && ovrl <= VINIFERA_END) &&
+		!(ovrl >= ABOREUS_BEGIN && ovrl <= ABOREUS_END))
+		return 0x4C45E9;
+
+	Map->DeleteTiberium(std::min(ovrl, (word)0xFF), ovrld);
+
+	int i, e;
+	int x, y;
+	x = dwPos % Map->MapWidthPlusHeight;
+	y = dwPos / Map->MapWidthPlusHeight;
+	int count = 0;
+
+	for (i = -1; i < 2; i++)
+	{
+		for (e = -1; e < 2; e++)
+		{
+			int xx = x + i;
+			int yy = y + e;
+
+			if (xx < 0 || xx >= Map->MapWidthPlusHeight || yy < 0 || yy >= Map->MapWidthPlusHeight) continue;
+
+			int pos = Map->GetCoordIndex(xx, yy);
+			auto& ovrl = Map->CellDataExts[pos].NewOverlay;
+
+			if (ovrl >= RIPARIUS_BEGIN && ovrl <= RIPARIUS_END)
+			{
+				count++;
+			}
+			if (ovrl >= CRUENTUS_BEGIN && ovrl <= CRUENTUS_END)
+			{
+				count++;
+			}
+			if (ovrl >= VINIFERA_BEGIN && ovrl <= VINIFERA_END)
+			{
+				count++;
+			}
+			if (ovrl >= ABOREUS_BEGIN && ovrl <= ABOREUS_END)
+			{
+				count++;
+			}
+		}
+	}
+	if (count > 0)
+	{
+		Map->CellDatas[dwPos].OverlayData = _adj[count - 1];
+		Map->OverlayData[y + x * 512] = _adj[count - 1];
+
+		Map->AddTiberium(std::min(ovrl, (word)0xFF), _adj[count - 1]);
+	}
+	else
+	{
+		Map->AddTiberium(std::min(ovrl, (word)0xFF), ovrld);
+	}
+	return 0x4C45E9;
+}
+
+static inline bool commandHasBorderRange(int command, int x = 1919, int y = 810)
+{
+	switch (command)
+	{
+	case 20:
+	case 21:
+	case 0x1F:
+	case 0x1E:
+		return (x == 1919 && y == 810) ? true : CMapDataExt::IsCoordInFullMap(x, y);
+	case 0x1B:
+	case 0x2:
+	case 0:
+		if (ExtConfigs::DisplayObjectsOutside && !CIsoView::GetInstance()->Drag)
+			return (x == 1919 && y == 810) ? true : CMapDataExt::IsCoordInFullMap(x, y);
+		break;
+	case 1:
+		// delete overlays
+		if (ExtConfigs::DisplayObjectsOutside && CIsoView::CurrentCommand->Type == 6 && CIsoView::CurrentCommand->Param == 1)
+			return (x == 1919 && y == 810) ? true : CMapDataExt::IsCoordInFullMap(x, y);
+		break;
+	case 5:
+		// delete nodes
+		if (ExtConfigs::DisplayObjectsOutside && CIsoView::CurrentCommand->Type == 2)
+			return (x == 1919 && y == 810) ? true : CMapDataExt::IsCoordInFullMap(x, y);
+		break;
+	case 3:
+		// delete waypoint
+		if (ExtConfigs::DisplayObjectsOutside && CIsoView::CurrentCommand->Type == 1)
+			return (x == 1919 && y == 810) ? true : CMapDataExt::IsCoordInFullMap(x, y);
+		break;
+	case 4:
+		// delete celltag
+		if (ExtConfigs::DisplayObjectsOutside && CIsoView::CurrentCommand->Type == 1)
+			return (x == 1919 && y == 810) ? true : CMapDataExt::IsCoordInFullMap(x, y);
+		break;
+	case 6:
+		// delete tube
+		if (ExtConfigs::DisplayObjectsOutside)
+			return (x == 1919 && y == 810) ? true : CMapDataExt::IsCoordInFullMap(x, y);
+		break;
+	case 0x1D:
+		// add/delete multi-selection
+		if (ExtConfigs::DisplayObjectsOutside && 
+			(CIsoView::CurrentCommand->Type == 3 || CIsoView::CurrentCommand->Type == 4 
+				|| CIsoView::CurrentCommand->Type == 10 || CIsoView::CurrentCommand->Type == 11))
+			return (x == 1919 && y == 810) ? true : CMapDataExt::IsCoordInFullMap(x, y);
+		break;
+	case 0x21:
+		// delete annotation
+		if (ExtConfigs::DisplayObjectsOutside && CIsoView::CurrentCommand->Type != 0)
+			return (x == 1919 && y == 810) ? true : CMapDataExt::IsCoordInFullMap(x, y);
+		break;
+	default:
+		break;
+	}
+	return false;
+}
+
+#pragma comment(lib, "imm32.lib") 
+DEFINE_HOOK(457223, CIsoView_OnMouseMove_MouseRange_1_DisableIME, 9)
+{
+	auto pIsoView = (CIsoViewExt*)CIsoView::GetInstance();
+	HIMC hIMC = ::ImmGetContext(pIsoView->GetSafeHwnd());
+	if (hIMC)
+	{
+		::ImmAssociateContext(pIsoView->GetSafeHwnd(), NULL);
+		::ImmReleaseContext(pIsoView->GetSafeHwnd(), hIMC);
+	}
+
+	GET(int, command, EDX);
+	if (commandHasBorderRange(command))
+		return 0x4572B9;
+	return 0x457235;
+}
+
+DEFINE_HOOK(4572B9, CIsoView_OnMouseMove_MouseRange_2, 5)
+{
+	GET(int, X, EBX);
+	GET(int, Y, ESI);
+	if (CMapDataExt::IsCoordInFullMap(X, Y))
+		return 0x4572E1;
+
+	return 0x456EB6;
+}
+
+DEFINE_HOOK(4615F0, CIsoView_OnLButtonDown_MouseRange, 5)
+{
+	GET(int, command, ECX);
+	GET(int, x, EDI);
+	GET(int, y, ESI);
+	if (commandHasBorderRange(command, x, y))
+		return 0x461651;
+	return 0x4615FA;
+}
+
+//DEFINE_HOOK(466C8E, CIsoView_OnLButtonUp_MouseRange, 5)
+//{
+//	GET(int, command, EDX);
+//	if (commandHasBorderRange(command))
+//		return 0x466CEC;
+//	return 0x466C98;
+//}
+
+DEFINE_HOOK(459D50, CIsoView_OnMouseMove_CliffBack_Alt_1, 6)
+{
+	if (TheaterInfo::CurrentInfoHasCliff2 && CIsoView::GetInstance()->KeyboardAMode)
+		CIsoViewExt::CliffBackAlt = true;
+	return 0;
+}
+
+DEFINE_HOOK(459D7B, CIsoView_OnMouseMove_CliffBack_Alt__2, 7)
+{
+	CIsoViewExt::CliffBackAlt = false;
+	return 0;
+}
+
+DEFINE_HOOK(459BFA, CIsoView_OnMouseMove_CliffFront_Alt__1, 7)
+{
+	if (TheaterInfo::CurrentInfoHasCliff2 && CIsoView::GetInstance()->KeyboardAMode)
+		CIsoViewExt::CliffBackAlt = true;
+	return 0;
+}
+
+DEFINE_HOOK(459C28, CIsoView_OnMouseMove_CliffFront_Alt_2, 7)
+{
+	CIsoViewExt::CliffBackAlt = false;
+	return 0;
+}
+
+DEFINE_HOOK(41B250, CIsoView_DrawCliff_NewUrban, 7)
+{
+	if (CIsoViewExt::CliffBackAlt)
+		R->Stack(0x14, TRUE);
+	return 0;
+}
+
+DEFINE_HOOK(45CD6D, CIsoView_OnMouseMove_StatusBar, 8)
+{
+	if (CIsoView::CurrentCommand->Command == 15) {
+		SendMessage(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd, 0x401, 0,
+			(LPARAM)Translations::TranslateOrDefault("FlattenGroundMessage",
+				"Shift: Steep slope, Ctrl+Shift:  Ignore non-morphable tiles"));
+		::RedrawWindow(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd, 0, 0, RDW_UPDATENOW | RDW_INVALIDATE);
+		::UpdateWindow(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd);
+		return 0x45CD82;
+	}
+	else if (CIsoView::CurrentCommand->Command == 13 || CIsoView::CurrentCommand->Command == 14) {
+		SendMessage(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd, 0x401, 0,
+			(LPARAM)Translations::TranslateOrDefault("HeightenAndLowerTileMessage",
+				"Ctrl: Create slope on the edges"));
+		::RedrawWindow(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd, 0, 0, RDW_UPDATENOW | RDW_INVALIDATE);
+		::UpdateWindow(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd);
+		return 0x45CD82;
+	}
+	else if (TheaterInfo::CurrentInfoHasCliff2 && (CIsoView::CurrentCommand->Command == 18 || CIsoView::CurrentCommand->Command == 19)) {
+		SendMessage(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd, 0x401, 0,
+			(LPARAM)(Translations::TranslateOrDefault("PressAToSwitchCliff", "Press key 'A' to switch cliff type")));
+		::RedrawWindow(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd, 0, 0, RDW_UPDATENOW | RDW_INVALIDATE);
+		::UpdateWindow(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd);
+		return 0x45CD82;
+	}
+	else if (CIsoView::CurrentCommand->Command == 0x22) {
+		SendMessage(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd, 0x401, 0,
+			(LPARAM)(Translations::TranslateOrDefault("DrawTunnelMessage",
+				"Click to draw the tunnel, double-click to set the endpoint and finish editing. The length of the tunnel cannot exceed 100.")));
+		::RedrawWindow(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd, 0, 0, RDW_UPDATENOW | RDW_INVALIDATE);
+		::UpdateWindow(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd);
+		return 0x45CD82;
+	}
+	else if (CIsoView::CurrentCommand->Command == 0x1E) {
+		ppmfc::CString text = "";
+		ppmfc::CString buffer;
+		for (int i = 0; i < 10; ++i)
+		{
+			int ctIndex = CIsoView::CurrentCommand->Type;
+			auto& info = CViewObjectsExt::TreeView_ConnectedTileMap[ctIndex];
+			auto& tileSet = CViewObjectsExt::ConnectedTileSets[info.Index];
+			if (tileSet.ToSetPress[i] > -1)
+			{
+				for (auto& [ctIndex2, info2] : CViewObjectsExt::TreeView_ConnectedTileMap)
+				{
+					if (info2.Index == tileSet.ToSetPress[i] && info2.Front == info.Front)
+					{
+						auto& tileSet2 = CViewObjectsExt::ConnectedTileSets[info2.Index];
+						buffer.Format(Translations::TranslateOrDefault("PressNumberToSwitchConnectedType", "Press number key %d to switch to %s")
+							, i, tileSet2.Name);
+						if (tileSet2.WaterCliff)
+						{
+							buffer += " ";
+							buffer += Translations::TranslateOrDefault("SwitchConnectedTypeIsWaterCliff", "(Water)");
+						}
+						buffer += ", ";
+						text += buffer;
+					}
+				}
+			}
+		}
+		if (text != "")
+		{
+			text.Delete(text.GetLength() - 2, 2);
+			SendMessage(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd, 0x401, 0, (LPARAM)text.m_pchData);
+			::RedrawWindow(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd, 0, 0, RDW_UPDATENOW | RDW_INVALIDATE);
+			::UpdateWindow(CFinalSunDlg::Instance->MyViewFrame.StatusBar.m_hWnd);
+			return 0x45CD82;
+		}
+	}
+	return 0;
+}
+
+DEFINE_HOOK(45F261, CIsoView_HandleProperties_Infantry, 7)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Infantry);
+	return 0;
+}
+
+DEFINE_HOOK(45FA44, CIsoView_HandleProperties_Building, 7)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Building);
+	return 0;
+}
+
+DEFINE_HOOK(4600B1, CIsoView_HandleProperties_Aircraft, 7)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Aircraft);
+	return 0;
+}
+
+DEFINE_HOOK(460742, CIsoView_HandleProperties_Unit, 7)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Unit);
+	return 0;
+}
+
+DEFINE_HOOK(466E50, CIsoView_OnLButtonUp_Drag_Infantry, 5)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Infantry);
+	return 0;
+}
+
+// building in CMapData/Hooks.cpp
+//DEFINE_HOOK(467035, CIsoView_OnLButtonUp_Drag_Building, 5)
+//{
+//	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Building);
+//	return 0;
+//}
+
+DEFINE_HOOK(467212, CIsoView_OnLButtonUp_Drag_Aircraft, 5)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Aircraft);
+	return 0;
+}
+
+DEFINE_HOOK(4673A2, CIsoView_OnLButtonUp_Drag_Unit, 5)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Unit);
+	return 0;
+}
+
+DEFINE_HOOK(467521, CIsoView_OnLButtonUp_Drag_Terrain, 5)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Terrain);
+	return 0;
+}
+
+DEFINE_HOOK(46759C, CIsoView_OnLButtonUp_Drag_Celltag, 5)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Celltag);
+	return 0;
+}
+
+DEFINE_HOOK(467615, CIsoView_OnLButtonUp_Drag_Waypoint, 5)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Waypoint);
+	return 0;
+}
+
+DEFINE_HOOK(45BFA6, CIsoView_OnMouseMove_Waypoint_Delete, 6)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Waypoint, true);
+	return 0;
+}
+
+DEFINE_HOOK(45BFE3, CIsoView_OnMouseMove_Waypoint_Add, 6)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Waypoint, true);
+	return 0;
+}
+
+DEFINE_HOOK(45C0CF, CIsoView_OnMouseMove_Waypoint_AddPlayerLocation, 6)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Waypoint, true);
+	auto deleteWaypoint = [](ppmfc::CString key)
+		{
+			if (auto pSection = CINI::CurrentDocument->GetSection("Waypoints"))
+			{
+				if (CINI::CurrentDocument->KeyExists("Waypoints", key))
+				{
+					auto&& value = pSection->GetString(key);
+					int x = atoi(value) / 1000;
+					int y = atoi(value) % 1000;
+					CINI::CurrentDocument->DeleteKey(pSection, key);
+					CMapData::Instance->UpdateFieldWaypointData(false);
+
+					if (CMapData::Instance->IsMultiOnly())
+					{
+						int k, l;
+						for (k = -1; k < 2; k++)
+							for (l = -1; l < 2; l++)
+								CMapData::Instance->UpdateMapPreviewAt(x + k, y + l);
+					}
+				}
+			}
+		};
+
+
+	if (CMapData::Instance->IsMultiOnly())
+	{
+		GET_STACK(int, waypoint, STACK_OFFS(0x3D528, 0x3D518));
+		ppmfc::CString key;
+		key.Format("%d", waypoint);
+		deleteWaypoint(key);
+	}
+	else
+	{
+		deleteWaypoint("98");
+		deleteWaypoint("99");
+	}
+	return 0;
+}
+
+DEFINE_HOOK(45C1C7, CIsoView_OnMouseMove_Celltag_Add, 5)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Celltag, true);
+	return 0;
+}
+
+DEFINE_HOOK(45C19B, CIsoView_OnMouseMove_Celltag_Delete, 6)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Celltag, true);
+	return 0;
+}
+
+DEFINE_HOOK(46661C, CIsoView_OnLButtonDown_Celltag_Add, 5)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Celltag);
+	return 0;
+}
+
+DEFINE_HOOK(4667E8, CIsoView_OnLButtonDown_Celltag_Modify, 6)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Celltag);
+	return 0;
+}
+
+DEFINE_HOOK(466970, CIsoView_OnLButtonUp_ResetRecordStatus, 6)
+{
+	CIsoViewExt::HistoryRecord_IsHoldingLButton = false;
+	ObjectRecord::ObjectRecord_HoldingPtr = nullptr;
+	return 0;
+}
+
+DEFINE_HOOK(45C37D, CIsoView_OnMouseMove_Basenode_Add_Del_Building, 6)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Basenode | ObjectRecord::RecordType::Building, true);
+	return 0;
+}
+
+DEFINE_HOOK(45C813, CIsoView_OnMouseMove_Basenode_Delete, 6)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Basenode, true);
+	return 0;
+}
+
+DEFINE_HOOK(45C6D2, CIsoView_OnMouseMove_Basenode_Add, 6)
+{
+	CMapDataExt::MakeObjectRecord(ObjectRecord::RecordType::Basenode, true);
+	return 0;
 }

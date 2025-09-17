@@ -19,16 +19,20 @@ BEGIN
     "P",            40038,                  VIRTKEY, CONTROL, NOINVERT
     "U",            40043,                  VIRTKEY, CONTROL, NOINVERT
     "H",            40039,                  VIRTKEY, CONTROL, NOINVERT
-    "R",            40076,                  VIRTKEY, CONTROL, NOINVERT
+    "R",            40151,                  VIRTKEY, CONTROL, NOINVERT
+    "R",            40163,                  VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "P",            40162,                  VIRTKEY, SHIFT, CONTROL, NOINVERT
     "G",            40042,                  VIRTKEY, CONTROL, NOINVERT
-    "T",            40046,                  VIRTKEY, CONTROL, NOINVERT
-    "C",            40044,                  VIRTKEY, SHIFT, CONTROL, NOINVERT
-    "E",            40045,                  VIRTKEY, CONTROL, NOINVERT
-    "J",            40047,                  VIRTKEY, CONTROL, NOINVERT
+    "T",            40139,                  VIRTKEY, CONTROL, NOINVERT
+    "C",            40150,                  VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "C",            40155,                  VIRTKEY, ALT, CONTROL, NOINVERT
+    "S",            40158,                  VIRTKEY, ALT, CONTROL, NOINVERT
+    "E",            40138,                  VIRTKEY, CONTROL, NOINVERT
+    "J",            40156,                  VIRTKEY, CONTROL, NOINVERT
     "K",            40048,                  VIRTKEY, CONTROL, NOINVERT
-    "Q",            40082,                  VIRTKEY, CONTROL, NOINVERT
+    "Q",            40160,                  VIRTKEY, CONTROL, NOINVERT
     "M",            40037,                  VIRTKEY, SHIFT, CONTROL, NOINVERT
-    "I",            40049,                  VIRTKEY, CONTROL, NOINVERT
+    "I",            40154,                  VIRTKEY, CONTROL, NOINVERT
     VK_F5,          40053,                  VIRTKEY, NOINVERT
     VK_F6,          40054,                  VIRTKEY, NOINVERT
     VK_F7,          40064,                  VIRTKEY, NOINVERT
@@ -38,9 +42,75 @@ BEGIN
     VK_F11,         40071,                  VIRTKEY, NOINVERT
     VK_F3,          40092,                  VIRTKEY, NOINVERT
     VK_F4,          40093,                  VIRTKEY, NOINVERT
-    "W",            40133,                  VIRTKEY, CONTROL, NOINVERT
+    "W",            40161,                  VIRTKEY, CONTROL, NOINVERT
     VK_F2,          40024,                  VIRTKEY, NOINVERT
     "F",            40134,                  VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "T",            40137,                  VIRTKEY, SHIFT, CONTROL, NOINVERT
+    "0",            30051,                  VIRTKEY, CONTROL, NOINVERT
+    VK_ADD,         30053,                  VIRTKEY, CONTROL, NOINVERT
+    VK_SUBTRACT,    30052,                  VIRTKEY, CONTROL, NOINVERT
+    VK_OEM_PLUS,    30053,                  VIRTKEY, CONTROL, NOINVERT
+    VK_OEM_MINUS,   30052,                  VIRTKEY, CONTROL, NOINVERT
+    VK_OEM_4,   	30054,                  VIRTKEY, NOINVERT
+    VK_OEM_6,   	30055,                  VIRTKEY, NOINVERT
+	"D",   			30056,                  VIRTKEY, CONTROL, NOINVERT
+    "5",            30008,                  VIRTKEY, CONTROL, NOINVERT
+    "6",            30009,                  VIRTKEY, CONTROL, NOINVERT
+    "7",            30010,                  VIRTKEY, CONTROL, NOINVERT
+    "1",            30000,                  VIRTKEY, CONTROL, NOINVERT
+    "2",            30001,                  VIRTKEY, CONTROL, NOINVERT
+    "3",            30002,                  VIRTKEY, CONTROL, NOINVERT
+    "4",            30003,                  VIRTKEY, CONTROL, NOINVERT
+    "8",            30004,                  VIRTKEY, CONTROL, NOINVERT
+    "0",            30005,                  VIRTKEY, ALT, NOINVERT
+    "1",            30006,                  VIRTKEY, ALT, NOINVERT
+    "2",            30011,                  VIRTKEY, ALT, NOINVERT
+    "3",            30007,                  VIRTKEY, ALT, NOINVERT
+    "4",            30012,                  VIRTKEY, ALT, NOINVERT 
+    "5",            30021,                  VIRTKEY, ALT, NOINVERT
+	"6",            30014,                  VIRTKEY, ALT, NOINVERT
+	"7",            30022,                  VIRTKEY, ALT, NOINVERT
+	"8",            30023,                  VIRTKEY, ALT, NOINVERT
+    "9",            30013,                  VIRTKEY, CONTROL, NOINVERT
+	//"Q",            40131,                  VIRTKEY, SHIFT, CONTROL, NOINVERT
+	//"W",            40132,                  VIRTKEY, SHIFT, CONTROL, NOINVERT
+	VK_DELETE,      40136,                  VIRTKEY, NOINVERT
+	"O",            40018,                  VIRTKEY, SHIFT, CONTROL, NOINVERT
 END
 
 101 RT_MANIFEST "FA2sp.manifest"
+1001 BITMAP "Resources/annotation.bmp"
+1002 BITMAP "Resources/default_cameo.bmp"
+1003 BITMAP "Resources/waypoint.bmp"
+1004 BITMAP "Resources/celltag.bmp"
+1005 BITMAP "Resources/tunnel.bmp"
+1006 BITMAP "Resources/brush.bmp"
+1007 BITMAP "Resources/annotationcameo.bmp"
+1008 BITMAP "Resources/search.bmp"
+1009 BITMAP "Resources/multiselect.bmp"
+1010 BITMAP "Resources/node.bmp"
+1011 BITMAP "Resources/delete.bmp"
+1012 BITMAP "Resources/connected.bmp"
+1013 BITMAP "Resources/tile.bmp"
+1014 BITMAP "Resources/house.bmp"
+1015 BITMAP "Resources/infantry.bmp"
+1016 BITMAP "Resources/aircraft.bmp"
+1017 BITMAP "Resources/unit.bmp"
+1018 BITMAP "Resources/building.bmp"
+1019 BITMAP "Resources/terrain.bmp"
+1020 BITMAP "Resources/smudge.bmp"
+1021 BITMAP "Resources/overlay.bmp"
+1022 BITMAP "Resources/player.bmp"
+128 BITMAP "Resources/toolbar.bmp"
+1023 BITMAP "Resources/data_waypoint.bmp"
+1024 BITMAP "Resources/data_celltag.bmp"
+1025 BITMAP "Resources/toolbarori.bmp"
+225 BITMAP "Resources/toolbar_2.bmp"
+264 BITMAP "Resources/toolbar_3.bmp"
+1026 BITMAP "Resources/toolbar_2ori.bmp"
+1027 BITMAP "Resources/toolbar_3ori.bmp"
+1028 BITMAP "Resources/checkbox.bmp"
+1029 BITMAP "Resources/radiochecked.bmp"
+1030 BITMAP "Resources/radiounchecked.bmp"
+1031 BITMAP "Resources/radiocheckedhover.bmp"
+1032 BITMAP "Resources/radiouncheckedhover.bmp"

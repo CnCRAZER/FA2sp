@@ -1,51 +1,44 @@
 #pragma once
 
 #include <CMapData.h>
-
+#include "..\Ext\CMapData\Body.h"
 #include <set>
 #include <concepts>
+#include "../ExtraWindow/CMultiSelectionOptionDlg/CMultiSelectionOptionDlg.h"
+#include "CopyPaste.h"
 
 class MultiSelection
 {
 public:
-    inline static bool AddCoord(int X, int Y);
-    inline static bool RemoveCoord(int X, int Y);
-    inline static size_t GetCount();
-    inline static void Clear();
-    inline static void ReverseStatus(int X, int Y);
-    inline static bool IsSelected(int X, int Y);
+    static bool AddCoord(int X, int Y);
+    static bool RemoveCoord(int X, int Y);
+    static size_t GetCount();
+    static void Clear();
+    static void ReverseStatus(int X, int Y);
+    static bool IsSelected(int X, int Y);
+    static void FindConnectedTiles(std::unordered_set<int>& process, int startX, int startY,
+        std::unordered_set<int>& tileSet, bool firstRun);
 
-    struct MyClipboardData
-    {
-        int X;
-        int Y;
-        unsigned char Overlay;
-        unsigned char OverlayData;
-        unsigned short TileIndex;
-        unsigned short TileIndexHiPart;
-        unsigned char TileSubIndex;
-        unsigned char Height;
-        unsigned char IceGrowth;
-        CellData::CellDataFlag Flag;
-    };
-    static void Copy();
-    static void Paste(int X, int Y, int nBaseHeight, MyClipboardData* data, size_t length);
+    static CMultiSelectionOptionDlg dlg;
 
-    template<typename _Fn> requires std::invocable<_Fn, CellData&>
+    template<typename _Fn> requires std::invocable<_Fn, CellData&, CellDataExt&>
     static void ApplyForEach(_Fn _Func)
     {
         for (auto& coord : SelectedCoords)
         {
-            auto pCell = CMapData::Instance->GetCellAt(coord.X, coord.Y);
-            _Func(*pCell);
+            auto pos = CMapData::Instance->GetCoordIndex(coord.X, coord.Y);
+            auto pCell = CMapData::Instance->GetCellAt(pos);
+            auto& cellExt = CMapDataExt::CellDataExts[pos];
+            _Func(*pCell, cellExt);
         }
     }
 
-    static bool ShiftKeyIsDown;
+    static bool IsSquareSelecting;
+    static bool Control_D_IsDown;
     static BGRStruct ColorHolder[0x1000];
-    static MapCoord CurrentCoord;
-
-private:
     static std::set<MapCoord> SelectedCoords;
+    static MapCoord LastAddedCoord;
+
+    static bool AddBuildingOptimize;
 };
 

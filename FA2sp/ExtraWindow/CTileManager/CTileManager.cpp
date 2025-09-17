@@ -9,8 +9,13 @@
 
 HWND CTileManager::m_hwnd;
 CTileSetBrowserFrame* CTileManager::m_parent;
-std::vector<std::pair<std::string, std::regex>> CTileManager::Nodes;
+std::vector<std::pair<FString, std::regex>> CTileManager::Nodes;
 std::vector<std::vector<int>> CTileManager::Datas;
+int CTileManager::origWndWidth;
+int CTileManager::origWndHeight;
+int CTileManager::minWndWidth;
+int CTileManager::minWndHeight;
+bool CTileManager::minSizeSet;
 
 void CTileManager::Create(CTileSetBrowserFrame* pWnd)
 {
@@ -33,7 +38,7 @@ void CTileManager::Create(CTileSetBrowserFrame* pWnd)
 
 void CTileManager::Initialize(HWND& hWnd)
 {
-    ppmfc::CString buffer;
+    FString buffer;
     if (Translations::GetTranslationItem("TileManagerTitle", buffer))
         SetWindowText(hWnd, buffer);
 
@@ -42,7 +47,7 @@ void CTileManager::Initialize(HWND& hWnd)
     InitNodes();
 
     for (auto& x : CTileManager::Nodes)
-        SendMessage(hTileTypes, LB_ADDSTRING, NULL, (LPARAM)x.first.c_str());
+        SendMessage(hTileTypes, LB_ADDSTRING, NULL, (LPARAM)x.first);
     
     UpdateTypes(hWnd);
 }
@@ -51,7 +56,7 @@ void CTileManager::InitNodes()
 {
     CTileManager::Nodes.clear();
 
-    ppmfc::CString lpKey = "TileManagerData";
+    FString lpKey = "TileManagerData";
     lpKey += CLoading::Instance->GetTheaterSuffix();
 
     MultimapHelper mmh;
@@ -61,14 +66,14 @@ void CTileManager::InitNodes()
     for (auto& key : pKeys)
     {
         CTileManager::Nodes.push_back(
-            std::make_pair<std::string, std::regex>(key.m_pchData, std::regex(mmh.GetString(lpKey, key), std::regex::icase))
+            std::make_pair<FString, std::regex>(key.m_pchData, std::regex(mmh.GetString(lpKey, key), std::regex::icase))
         );
     }
 
     if (!Translations::GetTranslationItem("TileManagerOthers", lpKey))
         lpKey = "Others";
     
-    CTileManager::Nodes.push_back(std::make_pair<std::string, std::regex>(lpKey.m_pchData, std::regex("")));
+    CTileManager::Nodes.push_back(std::make_pair(lpKey, std::regex("")));
 
     CTileManager::Datas.resize(CTileManager::Nodes.size());
 }
@@ -90,7 +95,53 @@ BOOL CALLBACK CTileManager::DlgProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM l
     case WM_INITDIALOG:
     {
         CTileManager::Initialize(hwnd);
+        RECT rect;
+        GetClientRect(hwnd, &rect);
+        origWndWidth = rect.right - rect.left;
+        origWndHeight = rect.bottom - rect.top;
+        minSizeSet = false;
         return TRUE;
+    }
+    case WM_GETMINMAXINFO: {
+        if (!minSizeSet) {
+            int borderWidth = GetSystemMetrics(SM_CXBORDER);
+            int borderHeight = GetSystemMetrics(SM_CYBORDER);
+            int captionHeight = GetSystemMetrics(SM_CYCAPTION);
+            minWndWidth = origWndWidth + 2 * borderWidth;
+            minWndHeight = (origWndHeight + captionHeight + 2 * borderHeight) * 2 / 3;
+            minSizeSet = true;
+        }
+        MINMAXINFO* pMinMax = (MINMAXINFO*)lParam;
+        pMinMax->ptMinTrackSize.x = minWndWidth;
+        pMinMax->ptMinTrackSize.y = minWndHeight;
+        return TRUE;
+    }
+    case WM_SIZE: {
+        HWND hListBox = GetDlgItem(hwnd, 6100);
+        HWND hDetail = GetDlgItem(hwnd, 6101);
+        int newWndWidth = LOWORD(lParam);
+        int newWndHeight = HIWORD(lParam);
+
+        RECT rect;
+        GetWindowRect(hListBox, &rect);
+
+        POINT topLeft = { rect.left, rect.top };
+        ScreenToClient(hwnd, &topLeft);
+
+        int newWidth = rect.right - rect.left;
+        int newHeight = newWndHeight - 15;
+        MoveWindow(hListBox, topLeft.x, topLeft.y, newWidth, newHeight, TRUE);
+
+        GetWindowRect(hDetail, &rect);
+        topLeft = { rect.left, rect.top };
+        ScreenToClient(hwnd, &topLeft);
+        newWidth = rect.right - rect.left + newWndWidth - origWndWidth;
+        newHeight = newWndHeight - 15;
+        MoveWindow(hDetail, topLeft.x, topLeft.y, newWidth, newHeight, TRUE);
+
+        origWndWidth = newWndWidth;
+        origWndHeight = newWndHeight;
+        break;
     }
     case WM_COMMAND:
     {
@@ -114,7 +165,19 @@ BOOL CALLBACK CTileManager::DlgProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM l
         CTileManager::Close(hwnd);
         return TRUE;
     }
+    case 114514: // used for update
+    {
+        CTileManager::Nodes.clear();
+        CTileManager::Datas.clear();
+        HWND hTileTypes = GetDlgItem(hwnd, 6100);
+        InitNodes();
 
+        while (SendMessage(hTileTypes, LB_DELETESTRING, 0, NULL) != LB_ERR);
+        for (auto& x : CTileManager::Nodes)
+            SendMessage(hTileTypes, LB_ADDSTRING, NULL, (LPARAM)x.first.c_str());
+
+        UpdateTypes(hwnd);
+    }
     }
 
     // Process this message through default handler
@@ -177,7 +240,7 @@ void CTileManager::UpdateTypes(HWND hWnd)
     if (nTileCount <= 0)
         return;
 
-    ppmfc::CString tile;
+    FString tile;
     for (int idx = 0; idx < nTileCount; ++idx)
     {
         int nTile = SendMessage(hTileComboBox, CB_GETITEMDATA, idx, NULL);
@@ -186,7 +249,7 @@ void CTileManager::UpdateTypes(HWND hWnd)
         bool other = true;
         for (size_t i = 0; i < CTileManager::Nodes.size() - 1; ++i)
         {
-            if (std::regex_search((std::string)tile.m_pchData, CTileManager::Nodes[i].second))
+            if (std::regex_search(tile, CTileManager::Nodes[i].second))
             {
                 CTileManager::Datas[i].push_back(idx); 
                 other = false;
@@ -209,14 +272,11 @@ void CTileManager::UpdateDetails(HWND hWnd, int kNode)
         return;
     else
     {
-        ppmfc::CString text, buffer;
+        FString buffer;
         for (auto& x : CTileManager::Datas[kNode])
         {
             int data = SendMessage(hTileComboBox, CB_GETITEMDATA, x, NULL);
-            text.Format("TileSet%04d", data);
-            text = CINI::CurrentTheater->GetString(text, "SetName", "NO NAME");
-            Translations::GetTranslationItem(text, text);
-            buffer.Format("(%04d) %s", data, text);
+            buffer.Format("(%04d) %s", data, Translations::TranslateTileSet(data));
             SendMessage(
                 hTileDetails, 
                 LB_SETITEMDATA, 

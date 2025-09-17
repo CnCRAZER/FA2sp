@@ -9,7 +9,7 @@
 
 #include "../CFinalSunDlg/Body.h"
 
-// FA2 Building Property window is fucked
+// FA2 Building Property window is messed up.
 DEFINE_HOOK(417F40, CPropertyBuilding_OnInitDialog, 7)
 {
     GET(CPropertyBuilding*, pThis, ECX);
@@ -17,13 +17,30 @@ DEFINE_HOOK(417F40, CPropertyBuilding_OnInitDialog, 7)
     pThis->ppmfc::CDialog::OnInitDialog();
 
     CMapData::Instance->UpdateCurrentDocument();
+    // && ExtConfigs::PlayerAtXForTechnos && !ExtConfigs::TestNotLoaded && 0
+    if (!CMapData::Instance->IsMultiOnly())
+    {
+        Miscs::LoadParams::Houses(reinterpret_cast<ppmfc::CComboBox*>(pThis->GetDlgItem(1079)), false, false, false);
+    }
+    else
+    {
+        if (ExtConfigs::TestNotLoaded)
+        {
+            
+        }
+        else if(ExtConfigs::PlayerAtXForTechnos)
+            Miscs::LoadParams::Houses(reinterpret_cast<ppmfc::CComboBox*>(pThis->GetDlgItem(1079)), false, false, true);
+        else
+            Miscs::LoadParams::Houses(reinterpret_cast<ppmfc::CComboBox*>(pThis->GetDlgItem(1079)), false, false, false);
+    }
+	
 
-    Miscs::LoadParams::Houses(reinterpret_cast<ppmfc::CComboBox*>(pThis->GetDlgItem(1079)), false, false, false);
     Miscs::LoadParams::Tags(reinterpret_cast<ppmfc::CComboBox*>(pThis->GetDlgItem(1083)), true);
 
     pThis->CSCStrength.SetRange(0, 256);
     pThis->CSCStrength.SetPos(atoi(pThis->CString_HealthPoint));
     pThis->UpdateData(FALSE);
+    pThis->GetDlgItem(1088)->SetWindowTextA(pThis->CString_Direction);
     
     ppmfc::CComboBox* pUpgrades[3]
     {
@@ -43,7 +60,7 @@ DEFINE_HOOK(417F40, CPropertyBuilding_OnInitDialog, 7)
         for (int i = 1300; i <= 1313; ++i)
             pThis->GetDlgItem(i)->ShowWindow(SW_HIDE);
 
-        int nUpgrades = Variables::Rules.GetInteger(pThis->CString_ObjectID, "Upgrades", 0);
+        int nUpgrades = Variables::RulesMap.GetInteger(pThis->CString_ObjectID, "Upgrades", 0);
 
         if (!pThis->CString_ObjectID.IsEmpty())
         {
@@ -58,9 +75,9 @@ DEFINE_HOOK(417F40, CPropertyBuilding_OnInitDialog, 7)
                 std::vector<std::string> upgrades;
                 for (auto& bld : CMapData::Instance->BuildingTypes)
                 {
-                    if (auto const ppString = Variables::Rules.TryGetString(bld.first, "PowersUpBuilding"))
+                    if (auto const pString = Variables::RulesMap.TryGetString(bld.first, "PowersUpBuilding"))
                     {
-                        if (*ppString == pThis->CString_ObjectID)
+                        if (*pString == pThis->CString_ObjectID)
                             upgrades.push_back(bld.first.m_pchData);
                     }
                 }
@@ -81,3 +98,4 @@ DEFINE_HOOK(417F40, CPropertyBuilding_OnInitDialog, 7)
 
     return 0x41A4AE;
 }
+

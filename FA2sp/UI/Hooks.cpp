@@ -2,8 +2,10 @@
 
 #include "../FA2sp.h"
 #include "../Logger.h"
-
 #include <FA2PP.h>
+#include <CFinalSunApp.h>
+#include <filesystem>
+namespace fs = std::filesystem;
 
 // Replace the resources
 
@@ -12,8 +14,23 @@ DEFINE_HOOK(56543B, FetchResource_CToolBar_LoadBitmapA, 6)
 	GET_STACK(LPCSTR, lpName, STACK_OFFS(0xC, -4));
 	const LPCSTR lpType = RT_BITMAP;
 	const HMODULE hModule = static_cast<HMODULE>(FA2sp::hInstance);
+
+	if (!ExtConfigs::UseNewToolBarCameo && (int)lpName == 128)
+	{
+		lpName = (char*)1025;
+	}
+	if (!ExtConfigs::UseNewToolBarCameo && (int)lpName == 225)
+	{
+		lpName = (char*)1026;
+	}
+	if (!ExtConfigs::UseNewToolBarCameo && (int)lpName == 264)
+	{
+		lpName = (char*)1027;
+	}
+
 	if (HRSRC hResInfo = FindResource(hModule, lpName, lpType)) {
-		HBITMAP hBitmap = AfxLoadSysColorBitmap(hModule, hResInfo, 0);
+		HBITMAP hBmp = AfxLoadSysColorBitmap(hModule, hResInfo, 0);
+		R->EAX(hBmp);
 		R->EBX(hResInfo);
 		R->ESI(hModule);
 		return 0x565457;

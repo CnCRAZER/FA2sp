@@ -3,6 +3,10 @@
 #include "../../Helpers/Translations.h"
 
 #include <CINI.h>
+#include <CLoading.h>
+#include "../../Miscs/Palettes.h"
+#include "../CFinalSunDlg/Body.h"
+#include "../CLoading/Body.h"
 
 void CLightingExt::ProgramStartupInit()
 {
@@ -48,9 +52,10 @@ void CLightingExt::Translate()
 
 BOOL CLightingExt::PreTranslateMessageExt(MSG* pMsg)
 {
-	if (pMsg->message == EN_KILLFOCUS || pMsg->message == WM_KEYDOWN && pMsg->wParam == VK_RETURN)
+	if (pMsg->message == WM_KEYUP)
 	{
-		auto process = [&pMsg, this](int nID, const char* pKey) -> bool
+		bool edited = false;
+		auto process = [&pMsg, this, &edited](int nID, const char* pKey, bool edit = true) -> bool
 		{
 			auto pWnd = (ppmfc::CWnd*)this->GetDlgItem(nID);
 			if (pMsg->hwnd == pWnd->m_hWnd)
@@ -66,8 +71,12 @@ BOOL CLightingExt::PreTranslateMessageExt(MSG* pMsg)
 					buffer = "0.000000";
 					pWnd->SetWindowText(buffer);
 				}
-				CINI::CurrentDocument->WriteString("Lighting", pKey, buffer);
-
+				if (CINI::CurrentDocument->GetString("Lighting", pKey) != buffer)
+				{
+					CINI::CurrentDocument->WriteString("Lighting", pKey, buffer);
+					if (edit)
+						edited = true;
+				}
 				return true;
 			}
 			return false;
@@ -81,10 +90,23 @@ BOOL CLightingExt::PreTranslateMessageExt(MSG* pMsg)
 		if (!process(1073, "Ground"))
 		if (!process(1074, "IonGround"))
 		if (!process(1075, "DominatorGround"))
-		if (!process(1076, "NukeAmbientChangeRate"))
-		if (!process(1077, "DominatorAmbientChangeRate"))
+		if (!process(1076, "NukeAmbientChangeRate", false))
+		if (!process(1077, "DominatorAmbientChangeRate", false))
 		;
 
+		if (edited && CFinalSunDlgExt::CurrentLighting != 31000)
+		{
+			LightingStruct::GetCurrentLighting();
+			for (int i = 0; i < CMapData::Instance->MapWidthPlusHeight; i++) {
+				for (int j = 0; j < CMapData::Instance->MapWidthPlusHeight; j++) {
+					CMapData::Instance->UpdateMapPreviewAt(i, j);
+				}
+			}
+			LightingSourceTint::CalculateMapLamps();
+
+			CFinalSunDlg::Instance()->MyViewFrame.Minimap.RedrawWindow(nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW);
+			CFinalSunDlg::Instance()->MyViewFrame.pIsoView->RedrawWindow(nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW);
+		}
 	}
 	return this->ppmfc::CDialog::PreTranslateMessage(pMsg);
 }

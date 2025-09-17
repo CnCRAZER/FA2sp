@@ -1,7 +1,6 @@
 #pragma once
 
-#include <Helpers/Macro.h>
-#include "Logger.h"
+#include <FA2PP.h>
 
 class RunTime
 {
@@ -15,6 +14,7 @@ public:
 
 	using ptr_type = unsigned long;
 	static void ResetMemoryContentAt(ptr_type addr, const void* content, size_t size, size_t offset = 0);
+	static void ResetStaticCharAt(ptr_type addr, const char* content);
 	
 	template<typename T>
 	static inline void ResetMemoryContentAt(DWORD addr, T value)

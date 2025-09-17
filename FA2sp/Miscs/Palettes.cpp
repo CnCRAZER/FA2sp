@@ -8,44 +8,25 @@
 #include <algorithm>
 
 #include "../Ext/CFinalSunDlg/Body.h"
+#include "../Ext/CMapData/Body.h"
+#include "MultiSelection.h"
 
 const LightingStruct LightingStruct::NoLighting = { -1,-1,-1,-1,-1,-1 };
+LightingStruct LightingStruct::CurrentLighting;
 
-std::map<ppmfc::CString, Palette*> PalettesManager::OriginPaletteFiles;
+std::map<FString, Palette*> PalettesManager::OriginPaletteFiles;
 std::map<Palette*, std::map<std::pair<BGRStruct, LightingStruct>, LightingPalette>> PalettesManager::CalculatedPaletteFiles;
+std::map<Palette*, std::map<std::pair<BGRStruct, LightingStruct>, LightingPalette>> PalettesManager::CalculatedDimmedPaletteFiles;
+std::map<Palette*, std::map<LightingStruct, LightingPalette>> PalettesManager::CalculatedPaletteFilesNoRemap;
+std::vector<LightingPalette> PalettesManager::CalculatedObjectPaletteFiles;
 Palette* PalettesManager::CurrentIso;
-bool PalettesManager::ManualReloadTMP = false;
-
-void PalettesManager::Init()
-{
-    PalettesManager::OriginPaletteFiles["isotem.pal"] = Palette::PALETTE_ISO;
-    PalettesManager::OriginPaletteFiles["isosno.pal"] = Palette::PALETTE_ISO;
-    PalettesManager::OriginPaletteFiles["isourb.pal"] = Palette::PALETTE_ISO;
-    PalettesManager::OriginPaletteFiles["isoubn.pal"] = Palette::PALETTE_ISO;
-    PalettesManager::OriginPaletteFiles["isolun.pal"] = Palette::PALETTE_ISO;
-    PalettesManager::OriginPaletteFiles["isodes.pal"] = Palette::PALETTE_ISO;
-    
-    PalettesManager::OriginPaletteFiles["unittem.pal"] = Palette::PALETTE_UNIT;
-    PalettesManager::OriginPaletteFiles["unitsno.pal"] = Palette::PALETTE_UNIT;
-    PalettesManager::OriginPaletteFiles["uniturb.pal"] = Palette::PALETTE_UNIT;
-    PalettesManager::OriginPaletteFiles["unitubn.pal"] = Palette::PALETTE_UNIT;
-    PalettesManager::OriginPaletteFiles["unitlun.pal"] = Palette::PALETTE_UNIT;
-    PalettesManager::OriginPaletteFiles["unitdes.pal"] = Palette::PALETTE_UNIT;
-
-    PalettesManager::OriginPaletteFiles["temperat.pal"] = Palette::PALETTE_THEATER;
-    PalettesManager::OriginPaletteFiles["snow.pal"] = Palette::PALETTE_THEATER;
-    PalettesManager::OriginPaletteFiles["urban.pal"] = Palette::PALETTE_THEATER;
-    PalettesManager::OriginPaletteFiles["urbann.pal"] = Palette::PALETTE_THEATER;
-    PalettesManager::OriginPaletteFiles["lunar.pal"] = Palette::PALETTE_THEATER;
-    PalettesManager::OriginPaletteFiles["desert.pal"] = Palette::PALETTE_THEATER;
-
-    PalettesManager::OriginPaletteFiles["libtem.pal"] = Palette::PALETTE_LIB;
-}
+bool PalettesManager::NeedReloadLighting = false;
 
 void PalettesManager::Release()
 {
+    Logger::Debug("PalettesManager: Releasing palettes.\n");
     for (auto& pair : PalettesManager::OriginPaletteFiles)
-        if (pair.second != Palette::PALETTE_UNIT &&
+        if (pair.second && pair.second != Palette::PALETTE_UNIT &&
             pair.second != Palette::PALETTE_ISO &&
             pair.second != Palette::PALETTE_THEATER &&
             pair.second != Palette::PALETTE_LIB)
@@ -53,28 +34,10 @@ void PalettesManager::Release()
 
     PalettesManager::OriginPaletteFiles.clear();
     PalettesManager::CalculatedPaletteFiles.clear();
-
-    PalettesManager::RestoreCurrentIso();
-
-    Init();
-}
-
-void PalettesManager::CacheCurrentIso()
-{
-    if (!PalettesManager::CurrentIso)
-        PalettesManager::CurrentIso = GameCreate<Palette>();
-
-    memcpy(PalettesManager::CurrentIso, Palette::PALETTE_ISO, 768);
-}
-
-void PalettesManager::RestoreCurrentIso()
-{
-    if (PalettesManager::CurrentIso)
-    {
-        memcpy(Palette::PALETTE_ISO, PalettesManager::CurrentIso, 768);
-        GameDelete(PalettesManager::CurrentIso);
-        PalettesManager::CurrentIso = nullptr;
-    }
+    PalettesManager::CalculatedPaletteFilesNoRemap.clear();
+    PalettesManager::CalculatedDimmedPaletteFiles.clear();
+    PalettesManager::CalculatedObjectPaletteFiles.clear();
+    PalettesManager::NeedReloadLighting = true;
 }
 
 Palette* PalettesManager::GetCurrentIso()
@@ -82,21 +45,17 @@ Palette* PalettesManager::GetCurrentIso()
     return PalettesManager::CurrentIso;
 }
 
-void PalettesManager::CacheAndTintCurrentIso()
-{
-    PalettesManager::CacheCurrentIso();
-    BGRStruct empty;
-    auto pPal = PalettesManager::GetPalette(Palette::PALETTE_ISO, empty, false);
-    memcpy(Palette::PALETTE_ISO, pPal, 768);
-}
-
-Palette* PalettesManager::LoadPalette(ppmfc::CString palname)
+Palette* PalettesManager::LoadPalette(FString palname)
 {
     auto itr = PalettesManager::OriginPaletteFiles.find(palname);
     if (itr != PalettesManager::OriginPaletteFiles.end())
         return itr->second;
+    
+    auto palToLoad = palname;
+    palToLoad.Replace("iso\233NotAutoTinted", "iso");
+    palToLoad.Replace("iso\233AutoTinted", "iso");
 
-    if (auto pBuffer = (BytePalette*)CLoading::Instance->ReadWholeFile(palname))
+    if (auto pBuffer = (BytePalette*)CLoading::Instance->ReadWholeFile(palToLoad))
     {
         auto pPalette = GameCreate<Palette>();
         for (int i = 0; i < 256; ++i)
@@ -113,64 +72,174 @@ Palette* PalettesManager::LoadPalette(ppmfc::CString palname)
     return nullptr;
 }
 
-Palette* PalettesManager::GetPalette(Palette* pPal, BGRStruct& color, bool remap)
+Palette* PalettesManager::GetPalette(Palette* pPal, BGRStruct& color, bool remap, Cell3DLocation location)
 {
-    LightingStruct lighting = LightingStruct::GetCurrentLighting();
+    if (remap)
+    {
+        auto itr = PalettesManager::CalculatedPaletteFiles[pPal].find(std::make_pair(color, LightingStruct::CurrentLighting));
+        if (itr != PalettesManager::CalculatedPaletteFiles[pPal].end())
+            return itr->second.GetPalette();
+    }
+    else
+    {
+        auto itr = PalettesManager::CalculatedPaletteFilesNoRemap[pPal].find(LightingStruct::CurrentLighting);
+        if (itr != PalettesManager::CalculatedPaletteFilesNoRemap[pPal].end())
+            return itr->second.GetPalette();
+    }
 
-    auto itr = PalettesManager::CalculatedPaletteFiles[pPal].find(std::make_pair(color, lighting));
-    if (itr != PalettesManager::CalculatedPaletteFiles[pPal].end())
-        return itr->second.GetPalette();
 
-    auto& p = PalettesManager::CalculatedPaletteFiles[pPal].emplace(
-        std::make_pair(std::make_pair(color, lighting), LightingPalette(*pPal))
+    auto& p = remap ? PalettesManager::CalculatedPaletteFiles[pPal].emplace(
+        std::make_pair(std::make_pair(color, LightingStruct::CurrentLighting), LightingPalette(*pPal))
+    ).first->second : PalettesManager::CalculatedPaletteFilesNoRemap[pPal].emplace(
+        std::make_pair(LightingStruct::CurrentLighting, LightingPalette(*pPal))
     ).first->second;
-
     if (remap)
         p.RemapColors(color);
     else
         p.ResetColors();
 
-    if (lighting != LightingStruct::NoLighting)
+    if (LightingStruct::CurrentLighting != LightingStruct::NoLighting)
     {
-        p.AdjustLighting(lighting);
+        p.AdjustLighting(LightingStruct::CurrentLighting, location);
         p.TintColors();
     }
+    return p.GetPalette();
+
+}
+
+Palette* PalettesManager::GetTileSetBrowserViewPalette(Palette* pPal, BGRStruct& color, bool remap, Cell3DLocation location)
+{
+    if (ExtConfigs::EnableDarkMode && ExtConfigs::EnableDarkMode_DimMap)
+    {
+        auto pal = ExtConfigs::LightingPreview_TintTileSetBrowserView ? GetPalette(pPal, color, remap, location) : pPal;
+        auto itr = PalettesManager::CalculatedDimmedPaletteFiles[pal].find(std::make_pair(color, LightingStruct::CurrentLighting));
+        if (itr != PalettesManager::CalculatedDimmedPaletteFiles[pal].end())
+            return itr->second.GetPalette();
+
+        auto& p = PalettesManager::CalculatedDimmedPaletteFiles[pal].emplace(
+            std::make_pair(std::make_pair(color, LightingStruct::CurrentLighting), LightingPalette(*pal))
+        ).first->second;
+        p.ResetColors();
+        p.AmbientMult = 0.7f;
+        p.RedMult = 1.0f;
+        p.GreenMult = 1.0f;
+        p.BlueMult = 1.0f;
+        p.TintColors();
+        return p.GetPalette();
+    }
+
+    return ExtConfigs::LightingPreview_TintTileSetBrowserView ? GetPalette(pPal, color, remap, location) : pPal; 
+}
+
+Palette* PalettesManager::GetObjectPalette(Palette* pPal, BGRStruct& color, bool remap, Cell3DLocation location, bool isopal, int extraLightType)
+{
+    auto& p = PalettesManager::CalculatedObjectPaletteFiles.emplace_back(LightingPalette(*pPal));
+    if (remap)
+        p.RemapColors(color);
+    else
+        p.ResetColors();
+
+    bool tintRGB = true;
+    // normal lighting won't tint unit RGB
+    if (remap && !ExtConfigs::LightingPreview_MultUnitColor && CFinalSunDlgExt::CurrentLighting == 31001 && extraLightType != 4)
+        tintRGB = false;
+
+    if (LightingStruct::CurrentLighting != LightingStruct::NoLighting)
+    {
+        if (!isopal)
+        {
+            p.AdjustLighting(LightingStruct::CurrentLighting, location, tintRGB, extraLightType);
+            p.TintColors();
+        }
+        else // isopal already tinted, so only apply level color
+        {
+            auto& ret = LightingStruct::CurrentLighting;
+            for (int i = 0; i < 256; ++i)
+            {
+                float ambLevel = ret.Ambient - ret.Ground + ret.Level * location.Height;
+                ambLevel = std::clamp(ambLevel, 0.0f, 2.0f);
+                float amb = ret.Ambient - ret.Ground;
+                amb = std::clamp(amb, 0.0f, 2.0f);
+                p.Colors[i].R = (unsigned char)std::min(p.Colors[i].R / amb * ambLevel, 255.0f);
+                p.Colors[i].G = (unsigned char)std::min(p.Colors[i].G / amb * ambLevel, 255.0f);
+                p.Colors[i].B = (unsigned char)std::min(p.Colors[i].B / amb * ambLevel, 255.0f);
+            }
+        }
+    }
+    return p.GetPalette();
+}
+
+Palette* PalettesManager::GetOverlayPalette(Palette* pPal, Cell3DLocation location, int overlay)
+{
+    auto& p = PalettesManager::CalculatedObjectPaletteFiles.emplace_back(LightingPalette(*pPal));
+    p.ResetColors();
+
+    auto& ret = LightingStruct::CurrentLighting;
+    auto safeColorBtye = [](int x)
+        {
+            if (x > 255)
+                x = 255;
+            if (x < 0)
+                x = 0;
+            return (byte)x;
+        };
+
+    if (LightingStruct::CurrentLighting != LightingStruct::NoLighting)
+    {
+        const auto overlay = CMapDataExt::GetExtension()->GetOverlayAt(
+            CMapData::Instance->GetCoordIndex(
+                CIsoViewExt::CurrentDrawCellLocation.X, CIsoViewExt::CurrentDrawCellLocation.Y));
+        if (!CMapDataExt::IsOre(overlay))
+        {
+            p.AdjustLighting(LightingStruct::CurrentLighting, location);
+            p.TintColors();
+        }   
+    }
+    if (MultiSelection::IsSelected(CIsoViewExt::CurrentDrawCellLocation.X, CIsoViewExt::CurrentDrawCellLocation.Y))
+    {
+        for (int i = 0; i < 256; ++i)
+        {
+            p.Colors[i].R = (p.Colors[i].R * 2 + reinterpret_cast<RGBClass*>(&ExtConfigs::MultiSelectionColor)->R) / 3;
+            p.Colors[i].G = (p.Colors[i].G * 2 + reinterpret_cast<RGBClass*>(&ExtConfigs::MultiSelectionColor)->G) / 3;
+            p.Colors[i].B = (p.Colors[i].B * 2 + reinterpret_cast<RGBClass*>(&ExtConfigs::MultiSelectionColor)->B) / 3;
+        }
+    }
+
     return p.GetPalette();
 }
 
 LightingStruct LightingStruct::GetCurrentLighting()
 {
-    LightingStruct ret;
     switch (CFinalSunDlgExt::CurrentLighting)
     {
     case 31001:
-        ret.Red = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "Red", 1.0));
-        ret.Green = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "Green", 1.0));
-        ret.Blue = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "Blue", 0.5));
-        ret.Ambient = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "Ambient", 1.0));
-        ret.Ground = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "Ground", 0.008));
-        ret.Level = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "Level", 0.087));
-        return ret;
+        CurrentLighting.Red = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "Red", 1.0));
+        CurrentLighting.Green = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "Green", 1.0));
+        CurrentLighting.Blue = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "Blue", 0.5));
+        CurrentLighting.Ambient = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "Ambient", 1.0));
+        CurrentLighting.Ground = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "Ground", 0.008));
+        CurrentLighting.Level = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "Level", 0.087));
+        return CurrentLighting;
     case 31002:
-        ret.Red = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "IonRed", 1.0));
-        ret.Green = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "IonGreen", 1.0));
-        ret.Blue = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "IonBlue", 0.5));
-        ret.Ambient = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "IonAmbient", 1.0));
-        ret.Ground = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "IonGround", 0.008));
-        ret.Level = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "IonLevel", 0.087));
-        return ret;
+        CurrentLighting.Red = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "IonRed", 1.0));
+        CurrentLighting.Green = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "IonGreen", 1.0));
+        CurrentLighting.Blue = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "IonBlue", 0.5));
+        CurrentLighting.Ambient = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "IonAmbient", 1.0));
+        CurrentLighting.Ground = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "IonGround", 0.008));
+        CurrentLighting.Level = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "IonLevel", 0.087));
+        return CurrentLighting;
     case 31003:
-        ret.Red = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "DominatorRed", 1.0));
-        ret.Green = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "DominatorGreen", 1.0));
-        ret.Blue = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "DominatorBlue", 0.5));
-        ret.Ambient = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "DominatorAmbient", 1.0));
-        ret.Ground = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "DominatorGround", 0.008));
-        ret.Level = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "DominatorLevel", 0.087));
-        return ret;
+        CurrentLighting.Red = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "DominatorRed", 1.0));
+        CurrentLighting.Green = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "DominatorGreen", 1.0));
+        CurrentLighting.Blue = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "DominatorBlue", 0.5));
+        CurrentLighting.Ambient = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "DominatorAmbient", 1.0));
+        CurrentLighting.Ground = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "DominatorGround", 0.008));
+        CurrentLighting.Level = static_cast<float>(CINI::CurrentDocument->GetDouble("Lighting", "DominatorLevel", 0.087));
+        return CurrentLighting;
     }
-
+    CurrentLighting = LightingStruct::NoLighting;
     // 31000
-    return LightingStruct::NoLighting;
+    return CurrentLighting;
 }
 
 LightingPalette::LightingPalette(Palette& originPal)
@@ -179,14 +248,45 @@ LightingPalette::LightingPalette(Palette& originPal)
     this->ResetColors();
 }
 
-void LightingPalette::AdjustLighting(LightingStruct& lighting, int level, bool tint)
+void LightingPalette::AdjustLighting(LightingStruct& lighting, Cell3DLocation location, bool tint, int extraLightType)
 {
-    this->AmbientMult = lighting.Ambient - lighting.Ground + lighting.Level * level;
+    const auto lamp = LightingSourceTint::ApplyLamp(location.X, location.Y);
+
+    this->AmbientMult = lighting.Ambient + lamp.AmbientTint - lighting.Ground + lighting.Level * location.Height;
+    if (extraLightType == 0)
+    {
+        this->AmbientMult += Variables::RulesMap.GetSingle("AudioVisual", "ExtraUnitLight", 0.2f);
+    }
+    else if (extraLightType == 1)
+    {
+        this->AmbientMult += Variables::RulesMap.GetSingle("AudioVisual", "ExtraInfantryLight", 0.2f);
+    }
+    else if (extraLightType == 2)
+    {
+        this->AmbientMult += Variables::RulesMap.GetSingle("AudioVisual", "ExtraAircraftLight", 0.2f);
+    }
+
     if (tint)
     {
-        this->RedMult = lighting.Red;
-        this->GreenMult = lighting.Green;
-        this->BlueMult = lighting.Blue;
+        if (extraLightType >= 0 && extraLightType != 4)
+        {
+            // lamp won't tint unit RGB
+            this->RedMult = lighting.Red;
+            this->GreenMult = lighting.Green;
+            this->BlueMult = lighting.Blue;
+        }
+        else
+        {
+            this->RedMult = lighting.Red + lamp.RedTint;
+            this->GreenMult = lighting.Green + lamp.GreenTint;
+            this->BlueMult = lighting.Blue + lamp.BlueTint;
+        }
+    }
+    else
+    {
+        this->RedMult = 1.0f;
+        this->GreenMult = 1.0f;
+        this->BlueMult = 1.0f;
     }
 }
 
@@ -251,4 +351,101 @@ void LightingPalette::TintColors(bool isObject)
 Palette* LightingPalette::GetPalette()
 {
     return &this->Colors;
+}
+
+LightingSourceTint LightingSourceTint::ApplyLamp(int X, int Y)
+{
+    if (CMapDataExt::Instance->IsCoordInMap(X, Y))
+        return CMapDataExt::CellDataExts[CMapData::Instance->GetCoordIndex(X, Y)].Lighting;
+    return { 0.0f, 0.0f, 0.0f, 0.0f };
+}
+
+void LightingSourceTint::CalculateMapLamps()
+{
+    if (LightingStruct::CurrentLighting == LightingStruct::NoLighting)
+        return;
+
+    CMapDataExt::LightingSources.clear();
+    const float TOLERANCE = 0.001f;
+    if (auto pSection = CINI::CurrentDocument->GetSection("Structures"))
+    {
+        for (const auto& [key,value] : pSection->GetEntities())
+        {
+            const auto atoms = STDHelpers::SplitString(value, 9);
+            // powered on
+            if (atoms[9] != "0")
+            {
+                const auto& ID = atoms[1];
+                LightingSource ls{};
+                ls.LightIntensity = Variables::RulesMap.GetSingle(ID, "LightIntensity", 0.0f);
+                if (abs(ls.LightIntensity) > TOLERANCE)
+                {
+                    ls.LightVisibility = Variables::RulesMap.GetInteger(ID, "LightVisibility", 5000);
+                    ls.LightRedTint = Variables::RulesMap.GetSingle(ID, "LightRedTint", 1.0f);
+                    ls.LightGreenTint = Variables::RulesMap.GetSingle(ID, "LightGreenTint", 1.0f);
+                    ls.LightBlueTint = Variables::RulesMap.GetSingle(ID, "LightBlueTint", 1.0f);
+                    const int Index = CMapData::Instance->GetBuildingTypeID(ID);
+                    const int Y = atoi(atoms[3]);
+                    const int X = atoi(atoms[4]);
+                    const auto& DataExt = CMapDataExt::BuildingDataExts[Index];
+
+                    ls.CenterX = X + DataExt.Height / 2.0f;
+                    ls.CenterY = Y + DataExt.Width / 2.0f;
+                    LightingSourcePosition lsp;
+                    lsp.X = X;
+                    lsp.Y = Y;
+                    lsp.BuildingType = ID;
+                    CMapDataExt::LightingSources.push_back(std::make_pair(lsp, ls));
+                }
+            }
+        }
+    }
+    for (int x = 0; x < CMapData::Instance->MapWidthPlusHeight; ++x)
+    {
+        for (int y = 0; y < CMapData::Instance->MapWidthPlusHeight; ++y)
+        {
+            auto& ret = CMapDataExt::CellDataExts[CMapData::Instance->GetCoordIndex(x, y)].Lighting;
+            ret.RedTint = 0.0f;
+            ret.GreenTint = 0.0f;
+            ret.BlueTint = 0.0f;
+            ret.AmbientTint = 0.0f;
+            for (const auto& [idx, ls] : CMapDataExt::LightingSources)
+            {
+                float sqX = (x - ls.CenterX) * (x - ls.CenterX);
+                float sqY = (y - ls.CenterY) * (y - ls.CenterY);
+                float distanceSquare = sqX + sqY;
+
+                if ((0 < ls.LightVisibility) && (distanceSquare < ls.LightVisibility * ls.LightVisibility / 65536))
+                {
+                    float lsEffect = (ls.LightVisibility - 256 * sqrt(distanceSquare)) / ls.LightVisibility;
+                    switch (CFinalSunDlgExt::CurrentLighting)
+                    {
+                        // color doesn't apply in superweapons
+                    case 31002:
+                    case 31003:
+                    {
+                        float maxTint = 0.0f;
+                        if (ls.LightRedTint > maxTint) maxTint = ls.LightRedTint;
+                        if (ls.LightBlueTint > maxTint) maxTint = ls.LightBlueTint;
+                        if (ls.LightGreenTint > maxTint) maxTint = ls.LightGreenTint;
+                        ret.AmbientTint += lsEffect * (maxTint * 0.5 + ls.LightIntensity);
+                        break;
+                    }
+                    default:
+                        ret.AmbientTint += lsEffect * ls.LightIntensity;
+                        ret.RedTint += lsEffect * ls.LightRedTint;
+                        ret.BlueTint += lsEffect * ls.LightBlueTint;
+                        ret.GreenTint += lsEffect * ls.LightGreenTint;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+bool LightingSourceTint::IsLamp(ppmfc::CString ID)
+{
+    const float TOLERANCE = 0.001f;
+    return abs(Variables::RulesMap.GetSingle(ID, "LightIntensity", 0.0f)) > TOLERANCE;
 }

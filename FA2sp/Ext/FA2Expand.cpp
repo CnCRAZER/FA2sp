@@ -49,27 +49,30 @@
 #include "CUpdateProgress/Body.h"
 #include "CFinalSunDlg/Body.h"
 #include "CIsoView/Body.h"
+#include "CCreateMap3B/Body.h"
 
 void __stdcall FA2Expand::ExeRun()
 {
-    CAITriggerTypesExt::ProgramStartupInit();
+    //CAITriggerTypesExt::ProgramStartupInit();
     CFinalSunDlgExt::ProgramStartupInit();
+    CCreditsExt::ProgramStartupInit();
     CHousesExt::ProgramStartupInit();
     CLightingExt::ProgramStartupInit();
-    // CIsoViewExt::ProgramStartupInit();
+    CCreateMap3BExt::ProgramStartupInit();
+    //CIsoViewExt::ProgramStartupInit();
     CPropertyAircraftExt::ProgramStartupInit();
     CPropertyBuildingExt::ProgramStartupInit();
     CPropertyInfantryExt::ProgramStartupInit();
     CPropertyUnitExt::ProgramStartupInit();
     CTileSetBrowserFrameExt::ProgramStartupInit();
-    CTriggerFrameExt::ProgramStartupInit();
-    CTriggerOptionExt::ProgramStartupInit();
-    CTriggerEventExt::ProgramStartupInit();
-    CTriggerActionExt::ProgramStartupInit();
-    CTaskForceExt::ProgramStartupInit();
-    CScriptTypesExt::ProgramStartupInit();
+    //CTriggerFrameExt::ProgramStartupInit();
+    //CTriggerOptionExt::ProgramStartupInit();
+    //CTriggerEventExt::ProgramStartupInit();
+    //CTriggerActionExt::ProgramStartupInit();
+    //CTaskForceExt::ProgramStartupInit();
+    //CScriptTypesExt::ProgramStartupInit();
     CSingleplayerSettingsExt::ProgramStartupInit();
-    CTeamTypesExt::ProgramStartupInit();
+    //CTeamTypesExt::ProgramStartupInit();
 }
 
 FA2Expand::FA2Expand()
