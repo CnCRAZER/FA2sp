@@ -86,7 +86,7 @@
     </ClCompile>
     <ResourceCompile>
       <Culture>0x0409</Culture>
-      <AdditionalOptions>/codepage:65001 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/codepage:1252 %(AdditionalOptions)</AdditionalOptions>
     </ResourceCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -129,7 +129,7 @@
     </ClCompile>
     <ResourceCompile>
       <Culture>0x0409</Culture>
-      <AdditionalOptions>/codepage:65001 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/codepage:1252 %(AdditionalOptions)</AdditionalOptions>
     </ResourceCompile>
     <Link>
       <SubSystem>Console</SubSystem>
