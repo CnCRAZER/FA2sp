@@ -264,9 +264,6 @@
     <ClInclude Include="FA2sp\Helpers\FString.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="FA2sp\ExtraWindow\CNewEasterEgg\CNewEasterEgg.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="FA2sp\Ext\CCredits\Body.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -698,9 +695,6 @@
     <ClCompile Include="FA2sp\Ext\CLoading\Body.MixManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="FA2sp\ExtraWindow\CNewEasterEgg\CNewEasterEgg.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="FA2sp\Ext\CCredits\Body.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -848,9 +842,6 @@
       <Filter>资源文件</Filter>
     </ResourceCompile>
     <ResourceCompile Include="FA2sp\ExtraWindow\COptions\COptions.rc">
-      <Filter>资源文件</Filter>
-    </ResourceCompile>
-    <ResourceCompile Include="FA2sp\ExtraWindow\CNewEasterEgg\CNewEasterEgg.rc">
       <Filter>资源文件</Filter>
     </ResourceCompile>
     <ResourceCompile Include="FA2sp\ExtraWindow\CNewMMXSavingOptionsDlg\CNewMMXSavingOptionsDlg.rc">
