@@ -3815,7 +3815,8 @@ void CIsoViewExt::DrawDistanceRuler(HDC hDC)
                 oss << std::fixed << distance;
                 buffer.Format(Translations::TranslateOrDefault("DistanceRuler.Distance", "Distance: %s"), oss.str().c_str());
                 ::TextOut(hDC, drawX, drawY + lineHeight * j++, buffer, buffer.GetLength());
-                buffer.Format(Translations::TranslateOrDefault("DistanceRuler.Coordinate", "XY: %d, %d, ¦¤XY: %d, %d"),
+                // Fallback string previously contained mojibake; use ASCII arrow to keep it readable without translations
+                buffer.Format(Translations::TranslateOrDefault("DistanceRuler.Coordinate", "XY: %d, %d, -> XY: %d, %d"),
                     coord2.Y, coord2.X, coord2.Y - coord1.Y, coord2.X - coord1.X);
                 ::TextOut(hDC, drawX, drawY + lineHeight * j++, buffer, buffer.GetLength());
             }

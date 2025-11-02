@@ -493,9 +493,9 @@ DEFINE_HOOK(428D97, CFinalSunDlg_SaveMap, 7)
         {
             comments += "; ";
             if (saveAsUTF8)
-                comments += Translations::TranslateOrDefault("SaveMap_FileEncodingComment1_UTF8", "本文件编码为 UTF8，请使用此格式打开");
+                comments += Translations::TranslateOrDefault("SaveMap_FileEncodingComment1_UTF8", "This file is saved in UTF-8 encoding.");
             else
-                comments += Translations::TranslateOrDefault("SaveMap_FileEncodingComment1", "本文件编码为 ANSI/GBK，请使用此格式打开");
+                comments += Translations::TranslateOrDefault("SaveMap_FileEncodingComment1", "This file is saved in ANSI/GBK encoding.");
 
             comments += "\n";
             comments += "; ";

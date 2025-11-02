@@ -1,5 +1,6 @@
 #include "DialogStyle.h"
 #include "../Helpers/STDHelpers.h"
+#include "../Helpers/Translations.h"
 #include <windowsx.h>
 #include "CFinalSunDlg.h"
 #include <psapi.h>
@@ -1903,13 +1904,9 @@ BOOL WINAPI DarkTheme::MyGetOpenFileNameA(LPOPENFILENAMEA ofn)
     if (DarkTheme::b_isSelectingGameFolder)
     {
         DarkTheme::b_isSelectingGameFolder = false;
-#ifdef CHINESE
-        ofn->lpstrFilter = "Mix 文件 (ra2md.mix)\0*.mix\0可执行文件 (gamemd.exe)\0*.exe\0所有文件 (*.*)\0*.*\0";
-        ofn->lpstrTitle = "选择文件";
-#else
+        // Always present English filter labels; use translation-aware title with English fallback
         ofn->lpstrFilter = "Mix Files (ra2md.mix)\0*.mix\0Executable Files (gamemd.exe)\0*.exe\0All Files (*.*)\0*.*\0";
-        ofn->lpstrTitle = "Select File";
-#endif
+        ofn->lpstrTitle = Translations::TranslateOrDefault("FileDialog.GameFolder.Title", "Select File");
     }
 
     auto filters = ConvertFilter(ofn->lpstrFilter);
