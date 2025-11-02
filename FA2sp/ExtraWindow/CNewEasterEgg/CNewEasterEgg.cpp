@@ -625,10 +625,12 @@ void CChineseChess::draw(HDC hdc)
     SetBkMode(hdc, TRANSPARENT);
     SetTextColor(hdc, RGB(100, 70, 40));
     HFONT oldf = (HFONT)SelectObject(hdc, hfText);
-    const wchar_t* ch1 = L"楚河"; const wchar_t* ch2 = L"汉界";
-    SIZE sz{}; GetTextExtentPoint32W(hdc, ch1, 2, &sz);
-    TextOutW(hdc, leftX + boardW / 2 - sz.cx - 40, topY + 4 * cell + cell / 2 - sz.cy / 2, ch1, 2);
-    TextOutW(hdc, leftX + boardW / 2 + 40, topY + 4 * cell + cell / 2 - sz.cy / 2, ch2, 2);
+    const wchar_t* ch1 = L"Chu River"; 
+    const wchar_t* ch2 = L"Han Border";
+    SIZE sz{}; 
+    GetTextExtentPoint32W(hdc, ch1, (int)wcslen(ch1), &sz);
+    TextOutW(hdc, leftX + boardW / 2 - sz.cx - 40, topY + 4 * cell + cell / 2 - sz.cy / 2, ch1, (int)wcslen(ch1));
+    TextOutW(hdc, leftX + boardW / 2 + 40, topY + 4 * cell + cell / 2 - sz.cy / 2, ch2, (int)wcslen(ch2));
 
     if (selR >= 0 && selC >= 0) {
         int displayR = 9 - selR; 
@@ -663,13 +665,20 @@ void CChineseChess::draw(HDC hdc)
 
         const wchar_t* name = L"?";
         switch (p) {
-        case BK_JU: name = L"車"; break; case RD_JU: name = L"俥"; break;
-        case BK_MA: name = L"馬"; break; case RD_MA: name = L"傌"; break;
-        case BK_XIANG: name = L"象"; break; case RD_XIANG: name = L"相"; break;
-        case BK_SHI: name = L"士"; break; case RD_SHI: name = L"仕"; break;
-        case BK_JIANG: name = L"將"; break; case RD_SHUAI: name = L"帥"; break;
-        case BK_PAO: name = L"砲"; break; case RD_PAO: name = L"炮"; break;
-        case BK_BING: name = L"卒"; break; case RD_BING: name = L"兵"; break;
+        case BK_JU: 
+        case RD_JU: name = L"R"; break; // Rook
+        case BK_MA: 
+        case RD_MA: name = L"N"; break; // Knight
+        case BK_XIANG: 
+        case RD_XIANG: name = L"E"; break; // Elephant (Bishop)
+        case BK_SHI: 
+        case RD_SHI: name = L"A"; break; // Advisor (Guard)
+        case BK_JIANG: 
+        case RD_SHUAI: name = L"G"; break; // General/Marshal
+        case BK_PAO: 
+        case RD_PAO: name = L"C"; break; // Cannon
+        case BK_BING: 
+        case RD_BING: name = L"S"; break; // Soldier
         }
         SetTextColor(hdc, red ? RGB(200, 40, 40) : RGB(40, 60, 120));
         TextCenter(hdc, cx, cy, name);
