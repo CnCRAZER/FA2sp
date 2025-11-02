@@ -5,10 +5,6 @@
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release_Chinese|Win32">
-      <Configuration>Release_Chinese</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
       <Platform>Win32</Platform>
@@ -23,13 +19,6 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Chinese|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
@@ -51,20 +40,11 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_Chinese|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LinkIncremental>false</LinkIncremental>
-    <IncludePath>MFC42\include;FA2pp;$(IncludePath)</IncludePath>
-    <LibraryPath>MFC42\lib;Release;$(LibraryPath)</LibraryPath>
-    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Chinese|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>MFC42\include;FA2pp;$(IncludePath)</IncludePath>
     <LibraryPath>MFC42\lib;Release;$(LibraryPath)</LibraryPath>
@@ -95,65 +75,29 @@
       </MinimalRebuild>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalOptions>-DISOLATION_AWARE_ENABLED %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-      <EnableModules>false</EnableModules>
-      <Optimization>MaxSpeed</Optimization>
-      <BuildStlModules>false</BuildStlModules>
-      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
-      <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
-      <AdditionalDependencies>DbgHelp.lib;legacy_stdio_definitions.lib;CncVxlRenderText.lib;libssl.lib;libcrypto.lib;lua.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalOptions>/SAFESEH:NO %(AdditionalOptions)</AdditionalOptions>
-      <IgnoreSpecificDefaultLibraries>
-      </IgnoreSpecificDefaultLibraries>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_Chinese|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>false</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_X86_;NDEBUG;NOMINMAX;CHINESE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
-      <ExceptionHandling>false</ExceptionHandling>
-      <BufferSecurityCheck>
-      </BufferSecurityCheck>
-      <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <DisableSpecificWarnings>4065;4530;4731;4244;4114;4172;4018;4390;4091;6269;28159;26812;28251;26495;</DisableSpecificWarnings>
-      <ObjectFileName>$(IntDir)\%(RelativeDir)</ObjectFileName>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <MinimalRebuild>
-      </MinimalRebuild>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalOptions>-DISOLATION_AWARE_ENABLED %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-utf-8 -DISOLATION_AWARE_ENABLED %(AdditionalOptions)</AdditionalOptions>
+      <SourceCharset>utf-8</SourceCharset>
+      <ExecutionCharset>utf-8</ExecutionCharset>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <EnableModules>false</EnableModules>
       <Optimization>MaxSpeed</Optimization>
       <BuildStlModules>false</BuildStlModules>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
     </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
-      <AdditionalDependencies>DbgHelp.lib;legacy_stdio_definitions.lib;CncVxlRenderText.lib;libssl.lib;libcrypto.lib;lua.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalOptions>/SAFESEH:NO %(AdditionalOptions)</AdditionalOptions>
-      <IgnoreSpecificDefaultLibraries>
-      </IgnoreSpecificDefaultLibraries>
-    </Link>
     <ResourceCompile>
-      <PreprocessorDefinitions>CHINESE;</PreprocessorDefinitions>
-      <AdditionalOptions>/c 936 %(AdditionalOptions)</AdditionalOptions>
+      <Culture>0x0409</Culture>
+      <AdditionalOptions>/codepage:65001 %(AdditionalOptions)</AdditionalOptions>
     </ResourceCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <AdditionalDependencies>DbgHelp.lib;legacy_stdio_definitions.lib;CncVxlRenderText.lib;libssl.lib;libcrypto.lib;lua.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/SAFESEH:NO %(AdditionalOptions)</AdditionalOptions>
+      <IgnoreSpecificDefaultLibraries>
+      </IgnoreSpecificDefaultLibraries>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -174,13 +118,19 @@
       </MinimalRebuild>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalOptions>-DISOLATION_AWARE_ENABLED %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-utf-8 -DISOLATION_AWARE_ENABLED %(AdditionalOptions)</AdditionalOptions>
+      <SourceCharset>utf-8</SourceCharset>
+      <ExecutionCharset>utf-8</ExecutionCharset>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <EnableModules>false</EnableModules>
       <Optimization>Disabled</Optimization>
       <BuildStlModules>false</BuildStlModules>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
     </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <AdditionalOptions>/codepage:65001 %(AdditionalOptions)</AdditionalOptions>
+    </ResourceCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

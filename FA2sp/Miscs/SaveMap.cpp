@@ -511,9 +511,9 @@ DEFINE_HOOK(428D97, CFinalSunDlg_SaveMap, 7)
         comments += "; Get it at http://www.westwood.com\n";
         comments += "; note that all comments were truncated\n";
         comments += "\n";
-        comments += "; This FA2 uses FA2sp created by secsome, modified by Handama & E1Elite\n";
-        comments += "; Get the lastest dll at https://github.com/handama/FA2sp\n";
-        comments += "; Current version : "  PRODUCT_STR  ", "  __str(HDM_PRODUCT_VERSION)  "\n\n";
+        comments += "; This FA2 uses FA2sp created by secsome, modified by RAZER\n";
+        comments += "; Get the lastest dll at https://gofuckyourself.stopeditingmymaps\n";
+        comments += "; Current version : "  PRODUCT_STR  ", "  __str(RAZER_PRODUCT_VERSION)  "\n\n";
 
         oss << comments;
 

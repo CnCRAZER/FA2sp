@@ -3,7 +3,7 @@
 306 DIALOG 0, 0, 390, 250
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Scripts"
-LANGUAGE LANG_GERMAN, SUBLANG_GERMAN
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 FONT 8, "Tahoma"
 {
    CONTROL "Scripttypes let you, for example, define that a team moves from one point to another. A scripttype is attached to a TeamType (not a TaskForce!)", -14836, STATIC, SS_LEFT | WS_CHILD | WS_VISIBLE | WS_GROUP, 7, 7, 280, 16 

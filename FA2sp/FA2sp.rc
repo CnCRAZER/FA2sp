@@ -1,5 +1,7 @@
 #include <Windows.h>
 
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+
 129 ACCELERATORS
 BEGIN
     "A",            40104,                  VIRTKEY, CONTROL, NOINVERT

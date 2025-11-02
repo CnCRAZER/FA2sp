@@ -83,7 +83,7 @@ LONG CALLBACK Exception::ExceptionFilter(PEXCEPTION_POINTERS const pExs)
 			fprintf(except, "Internal Error encountered!\n");
 			fprintf(except, pDelim);
 			fprintf(except, VERSION_STRVER);
-			fprintf(except, ", "  __str(HDM_PRODUCT_VERSION));
+			fprintf(except, ", "  __str(RAZER_PRODUCT_VERSION));
 			fprintf(except, "\n");
 			fprintf(except, pDelim);
 

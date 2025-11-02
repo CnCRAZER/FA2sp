@@ -1922,6 +1922,13 @@ BOOL WINAPI DarkTheme::MyGetOpenFileNameA(LPOPENFILENAMEA ofn)
         pFileOpen->SetFileTypeIndex(ofn->nFilterIndex);
     }
 
+    // Ensure the modern dialog title is set using wide string
+    if (ofn->lpstrTitle && ofn->lpstrTitle[0])
+    {
+        std::wstring wtitle = STDHelpers::StringToWString(ofn->lpstrTitle);
+        pFileOpen->SetTitle(wtitle.c_str());
+    }
+
     hr = pFileOpen->Show(ofn->hwndOwner);
     if (FAILED(hr)) { pFileOpen->Release(); CoUninitialize(); return FALSE; }
 
@@ -1978,6 +1985,13 @@ BOOL WINAPI DarkTheme::MyGetSaveFileNameA(LPOPENFILENAMEA ofn)
         }
         pFileSave->SetFileTypes(static_cast<UINT>(filters.size()), specs.data());
         pFileSave->SetFileTypeIndex(ofn->nFilterIndex);
+    }
+
+    // Ensure the modern dialog title is set using wide string (if provided)
+    if (ofn->lpstrTitle && ofn->lpstrTitle[0])
+    {
+        std::wstring wtitle = STDHelpers::StringToWString(ofn->lpstrTitle);
+        pFileSave->SetTitle(wtitle.c_str());
     }
 
     hr = pFileSave->Show(ofn->hwndOwner);

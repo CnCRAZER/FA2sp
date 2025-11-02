@@ -3,7 +3,7 @@
 148 DIALOG 0, 0, 303, 294
 STYLE DS_SETFONT | DS_MODALFRAME | WS_CAPTION | WS_SYSMENU | DS_CENTER
 CAPTION "Lighting Settings"
-LANGUAGE LANG_GERMAN, SUBLANG_GERMAN
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 FONT 8, "Tahoma"
 {
    CONTROL "Lighting settings define the color of the terrain in the game, and you can specify a very dark or very bright map. Be careful, using wrong settings may cause the player to be unable to see his units.", 1285, STATIC, SS_LEFT | WS_CHILD | WS_VISIBLE | WS_GROUP, 6, 5, 290, 25 
